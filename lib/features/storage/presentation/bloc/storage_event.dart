@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+
 import '../../domain/entities/storage_item.dart';
 import '../../domain/entities/storage_summary.dart';
 

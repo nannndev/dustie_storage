@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+
 import '../../../../core/utils/file_size_formatter.dart';
 import 'file_category.dart';
 
@@ -33,13 +34,13 @@ class StorageItem extends Equatable {
 
   @override
   List<Object?> get props => [
-        path,
-        name,
-        size,
-        isDirectory,
-        modified,
-        extension,
-        category,
-        childCount,
-      ];
+    path,
+    name,
+    size,
+    isDirectory,
+    modified,
+    extension,
+    category,
+    childCount,
+  ];
 }

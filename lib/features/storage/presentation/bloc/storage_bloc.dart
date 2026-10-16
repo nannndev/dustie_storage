@@ -1,5 +1,7 @@
 import 'dart:async';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
+
 import '../../../../core/utils/file_size_formatter.dart';
 import '../../domain/repositories/storage_repository.dart';
 import 'storage_event.dart';
@@ -36,19 +38,18 @@ class StorageBloc extends Bloc<StorageEvent, StorageState> {
     emit(state.copyWith(status: StorageStatus.loading));
     try {
       final locs = await repository.getCommonLocations();
-      emit(state.copyWith(
-        status: StorageStatus.initial,
-        locations: locs,
-      ));
+      emit(state.copyWith(status: StorageStatus.initial, locations: locs));
 
       if (locs.isNotEmpty && state.currentPath.isEmpty) {
         add(StartScanRequested(locs.first.path));
       }
     } catch (e) {
-      emit(state.copyWith(
-        status: StorageStatus.failure,
-        errorMessage: 'Failed to load system drive locations: $e',
-      ));
+      emit(
+        state.copyWith(
+          status: StorageStatus.failure,
+          errorMessage: 'Failed to load system drive locations: $e',
+        ),
+      );
     }
   }
 
@@ -59,24 +60,28 @@ class StorageBloc extends Bloc<StorageEvent, StorageState> {
     await _scanSubscription?.cancel();
     repository.cancelScan();
 
-    emit(state.copyWith(
-      status: StorageStatus.scanning,
-      currentPath: event.path,
-      statusMessage: 'Scanning ${event.path}...',
-      clearError: true,
-    ));
+    emit(
+      state.copyWith(
+        status: StorageStatus.scanning,
+        currentPath: event.path,
+        statusMessage: 'Scanning ${event.path}...',
+        clearError: true,
+      ),
+    );
 
-    _scanSubscription = repository.scanDirectoryStream(
-      event.path,
-      onCompleted: (summary) {
-        add(ScanCompletedEvent(summary));
-      },
-      onError: (err) {
-        add(ScanFailedEvent(err));
-      },
-    ).listen((currentPath) {
-      add(ScanProgressUpdated(currentPath));
-    });
+    _scanSubscription = repository
+        .scanDirectoryStream(
+          event.path,
+          onCompleted: (summary) {
+            add(ScanCompletedEvent(summary));
+          },
+          onError: (err) {
+            add(ScanFailedEvent(err));
+          },
+        )
+        .listen((currentPath) {
+          add(ScanProgressUpdated(currentPath));
+        });
   }
 
   Future<void> _onPickAndScanCustomFolder(
@@ -98,37 +103,35 @@ class StorageBloc extends Bloc<StorageEvent, StorageState> {
     }
   }
 
-  void _onScanCompleted(
-    ScanCompletedEvent event,
-    Emitter<StorageState> emit,
-  ) {
-    emit(state.copyWith(
-      status: StorageStatus.success,
-      summary: event.summary,
-      statusMessage: 'Scan complete (${event.summary.files.length} files found)',
-    ));
+  void _onScanCompleted(ScanCompletedEvent event, Emitter<StorageState> emit) {
+    emit(
+      state.copyWith(
+        status: StorageStatus.success,
+        summary: event.summary,
+        statusMessage:
+            'Scan complete (${event.summary.files.length} files found)',
+      ),
+    );
   }
 
-  void _onScanFailed(
-    ScanFailedEvent event,
-    Emitter<StorageState> emit,
-  ) {
-    emit(state.copyWith(
-      status: StorageStatus.failure,
-      errorMessage: event.message,
-    ));
+  void _onScanFailed(ScanFailedEvent event, Emitter<StorageState> emit) {
+    emit(
+      state.copyWith(
+        status: StorageStatus.failure,
+        errorMessage: event.message,
+      ),
+    );
   }
 
-  void _onCancelScan(
-    CancelScanRequested event,
-    Emitter<StorageState> emit,
-  ) {
+  void _onCancelScan(CancelScanRequested event, Emitter<StorageState> emit) {
     _scanSubscription?.cancel();
     repository.cancelScan();
-    emit(state.copyWith(
-      status: StorageStatus.success,
-      statusMessage: 'Scan cancelled',
-    ));
+    emit(
+      state.copyWith(
+        status: StorageStatus.success,
+        statusMessage: 'Scan cancelled',
+      ),
+    );
   }
 
   Future<void> _onDeleteSingleItem(
@@ -138,10 +141,14 @@ class StorageBloc extends Bloc<StorageEvent, StorageState> {
     final success = await repository.deleteItem(event.item);
     if (success) {
       // Patch results in place instead of rescanning: keeps the user's tab, filters and scroll position
-      emit(state.copyWith(
-        summary: state.summary.without({event.item.path}),
-        notificationMessage: 'Deleted ${event.item.name} (${event.item.formattedSize} freed)',
-      ));
+      final patched = await state.summary.withoutAsync({event.item.path});
+      emit(
+        state.copyWith(
+          summary: patched,
+          notificationMessage:
+              'Deleted ${event.item.name} (${event.item.formattedSize} freed)',
+        ),
+      );
     } else {
       emit(state.copyWith(errorMessage: 'Could not delete ${event.item.name}'));
     }
@@ -159,10 +166,14 @@ class StorageBloc extends Bloc<StorageEvent, StorageState> {
         freedBytes += item.size;
       }
     }
-    emit(state.copyWith(
-      summary: state.summary.without(deleted),
-      notificationMessage: 'Deleted ${deleted.length} items (${FileSizeFormatter.format(freedBytes)} reclaimed!)',
-    ));
+    final patched = await state.summary.withoutAsync(deleted);
+    emit(
+      state.copyWith(
+        summary: patched,
+        notificationMessage:
+            'Deleted ${deleted.length} items (${FileSizeFormatter.format(freedBytes)} reclaimed!)',
+      ),
+    );
   }
 
   Future<void> _onDeleteEmptyDirectories(
@@ -175,10 +186,13 @@ class StorageBloc extends Bloc<StorageEvent, StorageState> {
         deleted.add(d);
       }
     }
-    emit(state.copyWith(
-      summary: state.summary.without(deleted),
-      notificationMessage: 'Removed ${deleted.length} empty folders',
-    ));
+    final patched = await state.summary.withoutAsync(deleted);
+    emit(
+      state.copyWith(
+        summary: patched,
+        notificationMessage: 'Removed ${deleted.length} empty folders',
+      ),
+    );
   }
 
   void _onDismissNotification(

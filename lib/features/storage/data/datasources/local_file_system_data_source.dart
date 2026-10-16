@@ -1,7 +1,10 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:isolate';
+
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
+
 import '../../domain/entities/file_category.dart';
 import '../../domain/entities/storage_item.dart';
 import '../../domain/entities/storage_summary.dart';
@@ -23,11 +26,18 @@ abstract class LocalFileSystemDataSource {
 }
 
 class LocalFileSystemDataSourceImpl implements LocalFileSystemDataSource {
-  bool _isCancelled = false;
+  Isolate? _isolate;
+  ReceivePort? _port;
+  StreamController<String>? _progress;
 
   @override
   void cancelScan() {
-    _isCancelled = true;
+    _isolate?.kill(priority: Isolate.immediate);
+    _isolate = null;
+    _port?.close();
+    _port = null;
+    _progress?.close();
+    _progress = null;
   }
 
   @override
@@ -35,80 +45,95 @@ class LocalFileSystemDataSourceImpl implements LocalFileSystemDataSource {
     String dirPath, {
     required Function(StorageSummary summary) onCompleted,
     required Function(String error) onError,
-  }) async* {
-    _isCancelled = false;
+  }) {
+    cancelScan();
+    final progress = _progress = StreamController<String>();
+    final port = _port = ReceivePort();
 
-    final rootDir = Directory(dirPath);
-    if (!await rootDir.exists()) {
-      onError('Directory does not exist');
-      return;
-    }
+    port.listen((msg) {
+      if (msg is String) {
+        progress.add(msg);
+      } else if (msg is StorageSummary) {
+        onCompleted(msg);
+        cancelScan();
+      } else {
+        // Uncaught isolate error arrives as [error, stack]; without this the UI would stay "scanning" forever
+        debugPrint('LocalFileSystemDataSource scan error: $msg');
+        onError(msg is List && msg.isNotEmpty ? '${msg.first}' : 'Scan failed');
+        cancelScan();
+      }
+    });
 
-    final List<StorageItem> files = [];
-    final List<String> allDirs = [];
-    final Set<String> nonEmptyDirs = {};
+    () async {
+      if (!await Directory(dirPath).exists()) {
+        onError('Directory does not exist');
+        cancelScan();
+        return;
+      }
+      // Walk the disk on a background isolate so the UI thread never blocks (macOS beachball)
+      final isolate = await Isolate.spawn(_scanInIsolate, (
+        port.sendPort,
+        dirPath,
+      ), onError: port.sendPort);
+      if (identical(_port, port)) {
+        _isolate = isolate;
+      } else {
+        isolate.kill(priority: Isolate.immediate); // cancelled while spawning
+      }
+    }();
 
-    int scannedCount = 0;
-    DateTime lastYield = DateTime.now();
+    return progress.stream;
+  }
 
-    try {
-      final lister = rootDir
-          .list(recursive: true, followLinks: false)
-          .handleError((error) {
-            // Silently continue scanning across protected system directories
-          });
+  static void _scanInIsolate((SendPort, String) args) {
+    final (send, rootPath) = args;
+    final files = <StorageItem>[];
+    final emptyFolders = <String>[];
+    final stack = [rootPath];
+    final clock = Stopwatch()..start();
+    var lastProgress = -1000;
 
-      await for (final entity in lister) {
-        if (_isCancelled) break;
+    while (stack.isNotEmpty) {
+      final dirPath = stack.removeLast();
+      final List<FileSystemEntity> children;
+      try {
+        children = Directory(dirPath).listSync(followLinks: false);
+      } catch (_) {
+        continue; // protected system dir: skip, and don't report it as empty
+      }
+      if (children.isEmpty && dirPath != rootPath) emptyFolders.add(dirPath);
 
-        scannedCount++;
-        final now = DateTime.now();
-
-        // Throttle progress updates to ~15fps for ultra-smooth UI
-        if (now.difference(lastYield).inMilliseconds > 70) {
-          lastYield = now;
-          yield entity.path;
-        }
-
-        nonEmptyDirs.add(p.dirname(entity.path));
-
-        try {
-          if (entity is File) {
-            // Sync stat avoids an IO-thread round trip per file (async stat was the main bottleneck)
+      for (final entity in children) {
+        if (entity is Directory) {
+          stack.add(entity.path);
+        } else if (entity is File) {
+          try {
             final stat = entity.statSync();
             final ext = p.extension(entity.path);
-            final name = p.basename(entity.path);
-            final category = FileCategoryExt.fromExtension(ext);
-
-            final item = StorageItem(
-              path: entity.path,
-              name: name,
-              size: stat.size,
-              isDirectory: false,
-              modified: stat.modified,
-              extension: ext,
-              category: category,
+            files.add(
+              StorageItem(
+                path: entity.path,
+                name: p.basename(entity.path),
+                size: stat.size,
+                isDirectory: false,
+                modified: stat.modified,
+                extension: ext,
+                category: FileCategoryExt.fromExtension(ext),
+              ),
             );
-
-            files.add(item);
-          } else if (entity is Directory) {
-            allDirs.add(entity.path);
-          }
-        } catch (_) {
-          continue;
+          } catch (_) {}
         }
       }
-    } catch (e) {
-      debugPrint('LocalFileSystemDataSource scan error: $e');
+
+      // ~10 progress messages/sec is plenty for the status line
+      if (clock.elapsedMilliseconds - lastProgress > 100) {
+        lastProgress = clock.elapsedMilliseconds;
+        send.send(dirPath);
+      }
     }
 
-    // shortcut: unreadable (permission-denied) dirs also look empty here, same as before since list() failed silently
-    final emptyFolders = _isCancelled ? <String>[] : allDirs.where((d) => !nonEmptyDirs.contains(d)).toList();
-
-    final summary = StorageSummary.fromFiles(dirPath, files, emptyFolders);
-
-    yield 'Scan completed ($scannedCount items)';
-    onCompleted(summary);
+    // Isolate.exit hands the result over without copying the (possibly huge) file list
+    Isolate.exit(send, StorageSummary.fromFiles(rootPath, files, emptyFolders));
   }
 
   @override

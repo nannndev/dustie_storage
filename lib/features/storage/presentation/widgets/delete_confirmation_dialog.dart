@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/file_size_formatter.dart';
 import '../../domain/entities/storage_item.dart';
@@ -31,7 +32,11 @@ class DeleteConfirmationDialog extends StatelessWidget {
               color: AppColors.danger.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(Icons.delete_forever_rounded, color: AppColors.danger, size: 24),
+            child: Icon(
+              Icons.delete_forever_rounded,
+              color: AppColors.danger,
+              size: 24,
+            ),
           ),
           const SizedBox(width: 12),
           const Text(
@@ -63,7 +68,10 @@ class DeleteConfirmationDialog extends StatelessWidget {
                 children: [
                   Text(
                     'Reclaimed Space:',
-                    style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: AppColors.textSecondary,
+                    ),
                   ),
                   Text(
                     FileSizeFormatter.format(totalBytes),
@@ -87,19 +95,27 @@ class DeleteConfirmationDialog extends StatelessWidget {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+          child: Text(
+            'Cancel',
+            style: TextStyle(color: AppColors.textSecondary),
+          ),
         ),
         FilledButton.icon(
           style: FilledButton.styleFrom(
             backgroundColor: AppColors.danger,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
           ),
           onPressed: () {
             Navigator.of(context).pop();
             onConfirm();
           },
           icon: const Icon(Icons.delete_rounded, size: 18),
-          label: const Text('Delete Now', style: TextStyle(fontWeight: FontWeight.w700)),
+          label: const Text(
+            'Delete Now',
+            style: TextStyle(fontWeight: FontWeight.w700),
+          ),
         ),
       ],
     );

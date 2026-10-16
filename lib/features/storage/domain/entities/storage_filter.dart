@@ -1,13 +1,8 @@
 import 'package:equatable/equatable.dart';
+
 import 'file_category.dart';
 
-enum SortOption {
-  sizeDesc,
-  sizeAsc,
-  dateDesc,
-  dateAsc,
-  nameAsc,
-}
+enum SortOption { sizeDesc, sizeAsc, dateDesc, dateAsc, nameAsc }
 
 extension SortOptionExt on SortOption {
   String get label {
@@ -69,12 +64,12 @@ class StorageFilter extends Equatable {
 
   @override
   List<Object?> get props => [
-        category,
-        minSizeBytes,
-        minAgeDays,
-        searchQuery,
-        sortOption,
-        filesOnly,
-        showHiddenOnly,
-      ];
+    category,
+    minSizeBytes,
+    minAgeDays,
+    searchQuery,
+    sortOption,
+    filesOnly,
+    showHiddenOnly,
+  ];
 }

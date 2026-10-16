@@ -1,5 +1,7 @@
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+
 import '../../../../core/theme/app_colors.dart';
 import 'dustie_mascot.dart';
 
@@ -8,15 +10,22 @@ class ScanningOverlay extends StatefulWidget {
   final String statusMessage;
   final VoidCallback onCancel;
 
-  const ScanningOverlay({super.key, required this.statusMessage, required this.onCancel});
+  const ScanningOverlay({
+    super.key,
+    required this.statusMessage,
+    required this.onCancel,
+  });
 
   @override
   State<ScanningOverlay> createState() => _ScanningOverlayState();
 }
 
-class _ScanningOverlayState extends State<ScanningOverlay> with SingleTickerProviderStateMixin {
-  late final AnimationController _controller =
-      AnimationController(vsync: this, duration: const Duration(seconds: 12))..repeat();
+class _ScanningOverlayState extends State<ScanningOverlay>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(seconds: 12),
+  )..repeat();
   final Stopwatch _stopwatch = Stopwatch()..start();
   // Lives in this State, so each new scan starts full-screen again
   bool _minimized = false;
@@ -67,7 +76,13 @@ class _ScanningOverlayState extends State<ScanningOverlay> with SingleTickerProv
                     width: 44,
                     height: 44,
                     child: RepaintBoundary(
-                      child: CustomPaint(painter: _GlobePainter(_controller, isDark: AppColors.isDark, compact: true)),
+                      child: CustomPaint(
+                        painter: _GlobePainter(
+                          _controller,
+                          isDark: AppColors.isDark,
+                          compact: true,
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -79,7 +94,11 @@ class _ScanningOverlayState extends State<ScanningOverlay> with SingleTickerProv
                         animation: _controller,
                         builder: (_, _) => Text(
                           'Scanning... $_elapsed',
-                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.textPrimary,
+                          ),
                         ),
                       ),
                       SizedBox(
@@ -88,19 +107,30 @@ class _ScanningOverlayState extends State<ScanningOverlay> with SingleTickerProv
                           'Showing previous results until done',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: AppColors.textMuted,
+                          ),
                         ),
                       ),
                     ],
                   ),
                   IconButton(
                     tooltip: 'Expand',
-                    icon: Icon(Icons.open_in_full_rounded, size: 16, color: AppColors.textSecondary),
+                    icon: Icon(
+                      Icons.open_in_full_rounded,
+                      size: 16,
+                      color: AppColors.textSecondary,
+                    ),
                     onPressed: () => setState(() => _minimized = false),
                   ),
                   IconButton(
                     tooltip: 'Stop Scan',
-                    icon: Icon(Icons.stop_circle_rounded, size: 20, color: AppColors.danger),
+                    icon: Icon(
+                      Icons.stop_circle_rounded,
+                      size: 20,
+                      color: AppColors.danger,
+                    ),
                     onPressed: widget.onCancel,
                   ),
                 ],
@@ -129,7 +159,10 @@ class _ScanningOverlayState extends State<ScanningOverlay> with SingleTickerProv
                   Positioned.fill(
                     child: RepaintBoundary(
                       child: CustomPaint(
-                        painter: _GlobePainter(_controller, isDark: AppColors.isDark),
+                        painter: _GlobePainter(
+                          _controller,
+                          isDark: AppColors.isDark,
+                        ),
                       ),
                     ),
                   ),
@@ -140,7 +173,11 @@ class _ScanningOverlayState extends State<ScanningOverlay> with SingleTickerProv
             const SizedBox(height: 20),
             Text(
               'Dustie is sniffing your files...',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                color: AppColors.textPrimary,
+              ),
             ),
             const SizedBox(height: 8),
             ConstrainedBox(
@@ -150,7 +187,11 @@ class _ScanningOverlayState extends State<ScanningOverlay> with SingleTickerProv
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 12, color: AppColors.textMuted, fontFamily: 'monospace'),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textMuted,
+                  fontFamily: 'monospace',
+                ),
               ),
             ),
             const SizedBox(height: 6),
@@ -158,7 +199,11 @@ class _ScanningOverlayState extends State<ScanningOverlay> with SingleTickerProv
               animation: _controller,
               builder: (_, _) => Text(
                 _elapsed,
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.primaryLight),
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primaryLight,
+                ),
               ),
             ),
             const SizedBox(height: 20),
@@ -172,7 +217,9 @@ class _ScanningOverlayState extends State<ScanningOverlay> with SingleTickerProv
                   style: FilledButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: AppColors.onPrimary,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -182,8 +229,12 @@ class _ScanningOverlayState extends State<ScanningOverlay> with SingleTickerProv
                   label: const Text('Stop Scan'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.danger,
-                    side: BorderSide(color: AppColors.danger.withValues(alpha: 0.5)),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    side: BorderSide(
+                      color: AppColors.danger.withValues(alpha: 0.5),
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                 ),
               ],
@@ -200,7 +251,8 @@ class _GlobePainter extends CustomPainter {
   final bool isDark;
   final bool compact;
 
-  _GlobePainter(this.anim, {required this.isDark, this.compact = false}) : super(repaint: anim);
+  _GlobePainter(this.anim, {required this.isDark, this.compact = false})
+    : super(repaint: anim);
 
   static const _palette = [
     AppColors.catInstaller,
@@ -232,10 +284,12 @@ class _GlobePainter extends CustomPainter {
     final beamY = math.sin(t * 3);
 
     final glow = Paint()
-      ..shader = RadialGradient(colors: [
-        AppColors.primary.withValues(alpha: isDark ? 0.28 : 0.16),
-        AppColors.primary.withValues(alpha: 0),
-      ]).createShader(Rect.fromCircle(center: c, radius: radius * 1.5));
+      ..shader = RadialGradient(
+        colors: [
+          AppColors.primary.withValues(alpha: isDark ? 0.28 : 0.16),
+          AppColors.primary.withValues(alpha: 0),
+        ],
+      ).createShader(Rect.fromCircle(center: c, radius: radius * 1.5));
     canvas.drawCircle(c, radius * 1.5, glow);
 
     if (!compact) {
@@ -257,8 +311,15 @@ class _GlobePainter extends CustomPainter {
       final scale = camera / (camera - z2);
       final depth = (z2 + 1) / 2; // 0 = back, 1 = front
       final hit = (y2 - beamY).abs() < 0.08;
-      final color = hit ? (isDark ? Colors.white : AppColors.primaryDark) : _palette[i % _palette.length];
-      projected.add((c + Offset(x1, y2) * radius * scale, depth, (hit ? 3.2 : 1.2 + depth * 2.2) * dotScale, color));
+      final color = hit
+          ? (isDark ? Colors.white : AppColors.primaryDark)
+          : _palette[i % _palette.length];
+      projected.add((
+        c + Offset(x1, y2) * radius * scale,
+        depth,
+        (hit ? 3.2 : 1.2 + depth * 2.2) * dotScale,
+        color,
+      ));
     }
     projected.sort((a, b) => a.$2.compareTo(b.$2));
 
@@ -285,7 +346,11 @@ class _GlobePainter extends CustomPainter {
     canvas.save();
     canvas.translate(c.dx, c.dy);
     canvas.rotate(tilt);
-    final rect = Rect.fromCenter(center: Offset.zero, width: r * 2, height: r * 0.5);
+    final rect = Rect.fromCenter(
+      center: Offset.zero,
+      width: r * 2,
+      height: r * 0.5,
+    );
     canvas.drawOval(
       rect,
       Paint()
@@ -300,5 +365,6 @@ class _GlobePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_GlobePainter old) => old.isDark != isDark || old.compact != compact;
+  bool shouldRepaint(_GlobePainter old) =>
+      old.isDark != isDark || old.compact != compact;
 }

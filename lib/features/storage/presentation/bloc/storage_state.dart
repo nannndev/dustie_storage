@@ -1,14 +1,9 @@
 import 'package:equatable/equatable.dart';
+
 import '../../domain/entities/storage_summary.dart';
 import '../../domain/entities/system_drive_location.dart';
 
-enum StorageStatus {
-  initial,
-  loading,
-  scanning,
-  success,
-  failure,
-}
+enum StorageStatus { initial, loading, scanning, success, failure }
 
 class StorageState extends Equatable {
   final StorageStatus status;
@@ -30,9 +25,7 @@ class StorageState extends Equatable {
   });
 
   factory StorageState.initial() {
-    return StorageState(
-      summary: StorageSummary.empty(),
-    );
+    return StorageState(summary: StorageSummary.empty());
   }
 
   bool get isScanning => status == StorageStatus.scanning;
@@ -55,18 +48,20 @@ class StorageState extends Equatable {
       summary: summary ?? this.summary,
       statusMessage: statusMessage ?? this.statusMessage,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
-      notificationMessage: clearNotification ? null : (notificationMessage ?? this.notificationMessage),
+      notificationMessage: clearNotification
+          ? null
+          : (notificationMessage ?? this.notificationMessage),
     );
   }
 
   @override
   List<Object?> get props => [
-        status,
-        currentPath,
-        locations,
-        summary,
-        statusMessage,
-        errorMessage,
-        notificationMessage,
-      ];
+    status,
+    currentPath,
+    locations,
+    summary,
+    statusMessage,
+    errorMessage,
+    notificationMessage,
+  ];
 }

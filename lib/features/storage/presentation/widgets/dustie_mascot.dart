@@ -1,13 +1,10 @@
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+
 import '../../../../core/theme/app_colors.dart';
 
-enum DustieMood {
-  idle,
-  scanning,
-  happy,
-  sleeping,
-}
+enum DustieMood { idle, scanning, happy, sleeping }
 
 class DustieMascot extends StatefulWidget {
   final double size;
@@ -25,7 +22,8 @@ class DustieMascot extends StatefulWidget {
   State<DustieMascot> createState() => _DustieMascotState();
 }
 
-class _DustieMascotState extends State<DustieMascot> with SingleTickerProviderStateMixin {
+class _DustieMascotState extends State<DustieMascot>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
 
   @override
@@ -61,7 +59,9 @@ class _DustieMascotState extends State<DustieMascot> with SingleTickerProviderSt
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
-        final floatOffset = widget.animate ? math.sin(_controller.value * math.pi) * 4.0 : 0.0;
+        final floatOffset = widget.animate
+            ? math.sin(_controller.value * math.pi) * 4.0
+            : 0.0;
         final wobbleAngle = widget.mood == DustieMood.scanning
             ? math.sin(_controller.value * math.pi * 4) * 0.08
             : 0.0;
@@ -122,16 +122,30 @@ class _DustiePainter extends CustomPainter {
     // Cheeks (Cute Pink Blush)
     final blushPaint = Paint()
       ..color = const Color(0xFFF43F5E).withValues(alpha: 0.55);
-    canvas.drawCircle(Offset(center.dx - radius * 0.55, center.dy + radius * 0.15), radius * 0.16, blushPaint);
-    canvas.drawCircle(Offset(center.dx + radius * 0.55, center.dy + radius * 0.15), radius * 0.16, blushPaint);
+    canvas.drawCircle(
+      Offset(center.dx - radius * 0.55, center.dy + radius * 0.15),
+      radius * 0.16,
+      blushPaint,
+    );
+    canvas.drawCircle(
+      Offset(center.dx + radius * 0.55, center.dy + radius * 0.15),
+      radius * 0.16,
+      blushPaint,
+    );
 
     // Eyes
     final eyePaint = Paint()..color = Colors.white;
     final pupilPaint = Paint()..color = const Color(0xFF101400);
     final sparkPaint = Paint()..color = Colors.white;
 
-    final leftEyeCenter = Offset(center.dx - radius * 0.32, center.dy - radius * 0.1);
-    final rightEyeCenter = Offset(center.dx + radius * 0.32, center.dy - radius * 0.1);
+    final leftEyeCenter = Offset(
+      center.dx - radius * 0.32,
+      center.dy - radius * 0.1,
+    );
+    final rightEyeCenter = Offset(
+      center.dx + radius * 0.32,
+      center.dy - radius * 0.1,
+    );
     final eyeRadius = radius * 0.22;
 
     if (mood == DustieMood.sleeping) {
@@ -162,11 +176,27 @@ class _DustiePainter extends CustomPainter {
           ? Offset(math.sin(progress * math.pi * 2) * 3, 0)
           : const Offset(0, 1);
 
-      canvas.drawCircle(leftEyeCenter + gazeOffset, eyeRadius * 0.65, pupilPaint);
-      canvas.drawCircle(rightEyeCenter + gazeOffset, eyeRadius * 0.65, pupilPaint);
+      canvas.drawCircle(
+        leftEyeCenter + gazeOffset,
+        eyeRadius * 0.65,
+        pupilPaint,
+      );
+      canvas.drawCircle(
+        rightEyeCenter + gazeOffset,
+        eyeRadius * 0.65,
+        pupilPaint,
+      );
 
-      canvas.drawCircle(leftEyeCenter + gazeOffset - const Offset(2.5, 2.5), eyeRadius * 0.26, sparkPaint);
-      canvas.drawCircle(rightEyeCenter + gazeOffset - const Offset(2.5, 2.5), eyeRadius * 0.26, sparkPaint);
+      canvas.drawCircle(
+        leftEyeCenter + gazeOffset - const Offset(2.5, 2.5),
+        eyeRadius * 0.26,
+        sparkPaint,
+      );
+      canvas.drawCircle(
+        rightEyeCenter + gazeOffset - const Offset(2.5, 2.5),
+        eyeRadius * 0.26,
+        sparkPaint,
+      );
     }
 
     // Mouth

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+
 import 'core/theme/app_colors.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_cubit.dart';
@@ -29,19 +30,15 @@ class DustieStorageApp extends StatelessWidget {
       ],
       child: MultiBlocProvider(
         providers: [
-          BlocProvider<ThemeCubit>(
-            create: (context) => ThemeCubit(),
-          ),
-          BlocProvider<NavigationCubit>(
-            create: (context) => NavigationCubit(),
-          ),
+          BlocProvider<ThemeCubit>(create: (context) => ThemeCubit()),
+          BlocProvider<NavigationCubit>(create: (context) => NavigationCubit()),
           BlocProvider<StorageFilterCubit>(
             create: (context) => StorageFilterCubit(),
           ),
           BlocProvider<StorageBloc>(
-            create: (context) => StorageBloc(
-              repository: context.read<StorageRepository>(),
-            )..add(const LoadCommonLocationsRequested()),
+            create: (context) =>
+                StorageBloc(repository: context.read<StorageRepository>())
+                  ..add(const LoadCommonLocationsRequested()),
           ),
         ],
         child: BlocBuilder<ThemeCubit, ThemeMode>(

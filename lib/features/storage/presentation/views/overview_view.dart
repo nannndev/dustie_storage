@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/file_size_formatter.dart';
 import '../../../navigation/presentation/cubit/navigation_cubit.dart';
 import '../../domain/entities/file_category.dart';
-import '../../domain/entities/storage_item.dart';
 import '../bloc/storage_bloc.dart';
 import '../bloc/storage_event.dart';
 import '../bloc/storage_state.dart';
@@ -25,13 +25,16 @@ class _OverviewViewState extends State<OverviewView> {
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<StorageBloc, StorageState>(
+      buildWhen: (a, b) =>
+          !identical(a.summary, b.summary) ||
+          a.isScanning != b.isScanning ||
+          a.currentPath != b.currentPath,
       builder: (context, state) {
         final result = state.summary;
-        final topHogs = List<StorageItem>.from(result.files)
-          ..sort((a, b) => b.size.compareTo(a.size));
-        final top5 = topHogs.take(5).toList();
+        final top5 = result.files.take(5).toList();
 
-        final potentialSavings = result.dustyItems.fold<int>(0, (sum, i) => sum + i.size) +
+        final potentialSavings =
+            result.dustyItems.fold<int>(0, (sum, i) => sum + i.size) +
             result.installerItems.fold<int>(0, (sum, i) => sum + i.size);
 
         return LayoutBuilder(
@@ -57,11 +60,18 @@ class _OverviewViewState extends State<OverviewView> {
                         const SizedBox(height: 12),
                         _buildStatCard(
                           title: 'Dusty Clutter',
-                          value: FileSizeFormatter.format(result.dustyItems.fold<int>(0, (s, i) => s + i.size)),
-                          subtitle: '${result.dustyItems.length} old files (>6 mos)',
+                          value: FileSizeFormatter.format(
+                            result.dustyItems.fold<int>(
+                              0,
+                              (s, i) => s + i.size,
+                            ),
+                          ),
+                          subtitle:
+                              '${result.dustyItems.length} old files (>6 mos)',
                           icon: Icons.auto_delete_rounded,
                           color: AppColors.warning,
-                          onTap: () => context.read<NavigationCubit>().setTab(3),
+                          onTap: () =>
+                              context.read<NavigationCubit>().setTab(3),
                         ),
                         const SizedBox(height: 12),
                         _buildStatCard(
@@ -70,7 +80,8 @@ class _OverviewViewState extends State<OverviewView> {
                           subtitle: 'Dusty + Installers',
                           icon: Icons.cleaning_services_rounded,
                           color: AppColors.success,
-                          onTap: () => context.read<NavigationCubit>().setTab(3),
+                          onTap: () =>
+                              context.read<NavigationCubit>().setTab(3),
                         ),
                       ],
                     )
@@ -90,11 +101,18 @@ class _OverviewViewState extends State<OverviewView> {
                         Expanded(
                           child: _buildStatCard(
                             title: 'Dusty Clutter',
-                            value: FileSizeFormatter.format(result.dustyItems.fold<int>(0, (s, i) => s + i.size)),
-                            subtitle: '${result.dustyItems.length} old files (>6 mos)',
+                            value: FileSizeFormatter.format(
+                              result.dustyItems.fold<int>(
+                                0,
+                                (s, i) => s + i.size,
+                              ),
+                            ),
+                            subtitle:
+                                '${result.dustyItems.length} old files (>6 mos)',
                             icon: Icons.auto_delete_rounded,
                             color: AppColors.warning,
-                            onTap: () => context.read<NavigationCubit>().setTab(3),
+                            onTap: () =>
+                                context.read<NavigationCubit>().setTab(3),
                           ),
                         ),
                         const SizedBox(width: 16),
@@ -105,7 +123,8 @@ class _OverviewViewState extends State<OverviewView> {
                             subtitle: 'Dusty + Installers',
                             icon: Icons.cleaning_services_rounded,
                             color: AppColors.success,
-                            onTap: () => context.read<NavigationCubit>().setTab(3),
+                            onTap: () =>
+                                context.read<NavigationCubit>().setTab(3),
                           ),
                         ),
                       ],
@@ -130,7 +149,8 @@ class _OverviewViewState extends State<OverviewView> {
                                   totalSize: result.totalSize,
                                   totalFiles: result.files.length,
                                   selectedCategory: _selectedCategory,
-                                  onCategorySelected: (cat) => setState(() => _selectedCategory = cat),
+                                  onCategorySelected: (cat) =>
+                                      setState(() => _selectedCategory = cat),
                                 ),
                               ),
                               const SizedBox(height: 24),
@@ -138,7 +158,8 @@ class _OverviewViewState extends State<OverviewView> {
                                 categorySizeMap: result.categorySizeMap,
                                 totalSize: result.totalSize,
                                 selectedCategory: _selectedCategory,
-                                onCategoryToggled: (cat) => setState(() => _selectedCategory = cat),
+                                onCategoryToggled: (cat) =>
+                                    setState(() => _selectedCategory = cat),
                               ),
                             ],
                           )
@@ -150,7 +171,8 @@ class _OverviewViewState extends State<OverviewView> {
                                 totalSize: result.totalSize,
                                 totalFiles: result.files.length,
                                 selectedCategory: _selectedCategory,
-                                onCategorySelected: (cat) => setState(() => _selectedCategory = cat),
+                                onCategorySelected: (cat) =>
+                                    setState(() => _selectedCategory = cat),
                               ),
                               const SizedBox(width: 36),
                               Expanded(
@@ -158,7 +180,8 @@ class _OverviewViewState extends State<OverviewView> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
                                       children: [
                                         Flexible(
                                           child: Text(
@@ -175,16 +198,33 @@ class _OverviewViewState extends State<OverviewView> {
                                         Row(
                                           children: [
                                             TextButton.icon(
-                                              onPressed: () => context.read<NavigationCubit>().setTab(1),
-                                              icon: const Icon(Icons.dashboard_customize_rounded, size: 16),
+                                              onPressed: () => context
+                                                  .read<NavigationCubit>()
+                                                  .setTab(1),
+                                              icon: const Icon(
+                                                Icons
+                                                    .dashboard_customize_rounded,
+                                                size: 16,
+                                              ),
                                               label: const Text('Bento Board'),
-                                              style: TextButton.styleFrom(foregroundColor: AppColors.primaryLight),
+                                              style: TextButton.styleFrom(
+                                                foregroundColor:
+                                                    AppColors.primaryLight,
+                                              ),
                                             ),
                                             TextButton.icon(
-                                              onPressed: () => context.read<NavigationCubit>().setTab(2),
-                                              icon: const Icon(Icons.tune_rounded, size: 16),
+                                              onPressed: () => context
+                                                  .read<NavigationCubit>()
+                                                  .setTab(2),
+                                              icon: const Icon(
+                                                Icons.tune_rounded,
+                                                size: 16,
+                                              ),
                                               label: const Text('Filters'),
-                                              style: TextButton.styleFrom(foregroundColor: AppColors.textSecondary),
+                                              style: TextButton.styleFrom(
+                                                foregroundColor:
+                                                    AppColors.textSecondary,
+                                              ),
                                             ),
                                           ],
                                         ),
@@ -195,7 +235,9 @@ class _OverviewViewState extends State<OverviewView> {
                                       categorySizeMap: result.categorySizeMap,
                                       totalSize: result.totalSize,
                                       selectedCategory: _selectedCategory,
-                                      onCategoryToggled: (cat) => setState(() => _selectedCategory = cat),
+                                      onCategoryToggled: (cat) => setState(
+                                        () => _selectedCategory = cat,
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -216,7 +258,11 @@ class _OverviewViewState extends State<OverviewView> {
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.local_fire_department_rounded, color: AppColors.catInstaller, size: 20),
+                          Icon(
+                            Icons.local_fire_department_rounded,
+                            color: AppColors.catInstaller,
+                            size: 20,
+                          ),
                           SizedBox(width: 8),
                           Text(
                             'Biggest Space Consumers',
@@ -229,8 +275,12 @@ class _OverviewViewState extends State<OverviewView> {
                         ],
                       ),
                       TextButton(
-                        onPressed: () => context.read<NavigationCubit>().setTab(2),
-                        child: Text('View All in Classifier →', style: TextStyle(color: AppColors.primaryLight)),
+                        onPressed: () =>
+                            context.read<NavigationCubit>().setTab(2),
+                        child: Text(
+                          'View All in Classifier →',
+                          style: TextStyle(color: AppColors.primaryLight),
+                        ),
                       ),
                     ],
                   ),
@@ -241,7 +291,9 @@ class _OverviewViewState extends State<OverviewView> {
                       padding: const EdgeInsets.all(32),
                       alignment: Alignment.center,
                       child: Text(
-                        state.isScanning ? 'Scanning files...' : 'No files scanned yet. Click a location above!',
+                        state.isScanning
+                            ? 'Scanning files...'
+                            : 'No files scanned yet. Click a location above!',
                         style: TextStyle(color: AppColors.textMuted),
                       ),
                     )
@@ -254,7 +306,9 @@ class _OverviewViewState extends State<OverviewView> {
                         final item = top5[index];
                         return FileListTile(
                           item: item,
-                          onDelete: () => context.read<StorageBloc>().add(DeleteSingleItemRequested(item)),
+                          onDelete: () => context.read<StorageBloc>().add(
+                            DeleteSingleItemRequested(item),
+                          ),
                         );
                       },
                     ),

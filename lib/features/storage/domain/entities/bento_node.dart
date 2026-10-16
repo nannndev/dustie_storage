@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+
 import '../../../../core/utils/file_size_formatter.dart';
 import 'file_category.dart';
 import 'storage_item.dart';
@@ -28,7 +29,12 @@ class BentoNode extends Equatable {
 
   String get formattedSize => FileSizeFormatter.format(size);
 
-  static BentoNode buildTreeFromItems(String rootPath, List<StorageItem> items) {
+  /// [depth] limits recursion: the board only shows one level (+ child names), and drill-down rebuilds from the path.
+  static BentoNode buildTreeFromItems(
+    String rootPath,
+    List<StorageItem> items, {
+    int depth = 2,
+  }) {
     if (items.isEmpty) {
       return BentoNode(
         name: rootPath.isEmpty ? 'Root' : rootPath.split('/').last,
@@ -50,15 +56,14 @@ class BentoNode extends Equatable {
         continue;
       }
 
-      final relative = item.path.substring(normalizedRoot.length);
-      final parts = relative.split('/');
-
-      if (parts.length == 1) {
+      // indexOf instead of split: avoids allocating every path segment for a million files
+      final slash = item.path.indexOf('/', normalizedRoot.length);
+      if (slash < 0) {
         // Direct file under this folder
         directFiles.add(item);
       } else {
         // Belongs to a subfolder
-        final subfolderName = parts.first;
+        final subfolderName = item.path.substring(normalizedRoot.length, slash);
         directChildrenItems.putIfAbsent(subfolderName, () => []).add(item);
       }
     }
@@ -73,37 +78,45 @@ class BentoNode extends Equatable {
       final totalSubSize = subItems.fold<int>(0, (s, i) => s + i.size);
 
       // Recursive nested node
-      final subTree = buildTreeFromItems(subPath, subItems);
+      final subTree = depth > 1
+          ? buildTreeFromItems(subPath, subItems, depth: depth - 1)
+          : null;
 
-      children.add(BentoNode(
-        name: subfolderName,
-        path: subPath,
-        size: totalSubSize,
-        isDirectory: true,
-        category: FileCategory.other,
-        children: subTree.children,
-        itemCount: subItems.length,
-      ));
+      children.add(
+        BentoNode(
+          name: subfolderName,
+          path: subPath,
+          size: totalSubSize,
+          isDirectory: true,
+          category: FileCategory.other,
+          children: subTree?.children ?? const [],
+          itemCount: subItems.length,
+        ),
+      );
     }
 
     // Add direct files
     for (final file in directFiles) {
-      children.add(BentoNode(
-        name: file.name,
-        path: file.path,
-        size: file.size,
-        isDirectory: false,
-        category: file.category,
-        children: const [],
-        itemCount: 1,
-      ));
+      children.add(
+        BentoNode(
+          name: file.name,
+          path: file.path,
+          size: file.size,
+          isDirectory: false,
+          category: file.category,
+          children: const [],
+          itemCount: 1,
+        ),
+      );
     }
 
     // Sort children strictly from LARGEST to SMALLEST
     children.sort((a, b) => b.size.compareTo(a.size));
 
     final totalSize = items.fold<int>(0, (s, i) => s + i.size);
-    final rootName = rootPath.isEmpty ? 'Root' : rootPath.split('/').where((s) => s.isNotEmpty).last;
+    final rootName = rootPath.isEmpty
+        ? 'Root'
+        : rootPath.split('/').where((s) => s.isNotEmpty).last;
 
     return BentoNode(
       name: rootName,
@@ -117,5 +130,14 @@ class BentoNode extends Equatable {
   }
 
   @override
-  List<Object?> get props => [name, path, size, isDirectory, category, children, itemCount, isGroup];
+  List<Object?> get props => [
+    name,
+    path,
+    size,
+    isDirectory,
+    category,
+    children,
+    itemCount,
+    isGroup,
+  ];
 }

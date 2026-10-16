@@ -4,22 +4,26 @@ import 'package:dustie_storage/features/storage/domain/entities/storage_summary.
 import 'package:flutter_test/flutter_test.dart';
 
 StorageItem _file(String path, int size) => StorageItem(
-      path: path,
-      name: path.split('/').last,
-      size: size,
-      isDirectory: false,
-      modified: DateTime(2020),
-      extension: '.dmg',
-      category: FileCategory.installer,
-    );
+  path: path,
+  name: path.split('/').last,
+  size: size,
+  isDirectory: false,
+  modified: DateTime(2020),
+  extension: '.dmg',
+  category: FileCategory.installer,
+);
 
 void main() {
   test('without() drops deleted files and folder contents, then regroups', () {
-    final summary = StorageSummary.fromFiles('/root', [
-      _file('/root/a/x.dmg', 200 * 1024),
-      _file('/root/b/x.dmg', 200 * 1024),
-      _file('/root/ab/y.dmg', 100),
-    ], ['/root/empty']);
+    final summary = StorageSummary.fromFiles(
+      '/root',
+      [
+        _file('/root/a/x.dmg', 200 * 1024),
+        _file('/root/b/x.dmg', 200 * 1024),
+        _file('/root/ab/y.dmg', 100),
+      ],
+      ['/root/empty'],
+    );
     expect(summary.duplicateGroups, hasLength(1));
 
     final after = summary.without({'/root/a', '/root/empty'});

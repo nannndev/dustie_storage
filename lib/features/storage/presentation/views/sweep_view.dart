@@ -1,5 +1,8 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/file_size_formatter.dart';
 import '../../domain/entities/storage_item.dart';
@@ -18,11 +21,18 @@ class SweepView extends StatefulWidget {
 }
 
 class _SweepViewState extends State<SweepView> {
+  // shortcut: shrinkWrap lists build every row up front, so cap them; "Clean All" / "Delete All" still act on everything
+  static const _maxRows = 300;
+
   int _activeSweepIndex = 0;
 
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<StorageBloc, StorageState>(
+      buildWhen: (a, b) =>
+          !identical(a.summary, b.summary) ||
+          a.isScanning != b.isScanning ||
+          a.currentPath != b.currentPath,
       builder: (context, state) {
         final result = state.summary;
 
@@ -80,7 +90,11 @@ class _SweepViewState extends State<SweepView> {
                           const SizedBox(height: 6),
                           Text(
                             'Dustie found ${FileSizeFormatter.format(totalReclaimable)} of clutter that can be safely reviewed and cleaned to free up valuable storage.',
-                            style: TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.4),
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: AppColors.textSecondary,
+                              height: 1.4,
+                            ),
                           ),
                         ],
                       ),
@@ -135,7 +149,13 @@ class _SweepViewState extends State<SweepView> {
               const SizedBox(height: 24),
 
               // Content for Selected Preset
-              _buildActiveCategoryContent(context, dusty, installers, archives, emptyFolders),
+              _buildActiveCategoryContent(
+                context,
+                dusty,
+                installers,
+                archives,
+                emptyFolders,
+              ),
             ],
           ),
         );
@@ -161,7 +181,9 @@ class _SweepViewState extends State<SweepView> {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: isSelected ? color.withValues(alpha: 0.14) : AppColors.bgSidebar,
+            color: isSelected
+                ? color.withValues(alpha: 0.14)
+                : AppColors.bgSidebar,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: isSelected ? color : AppColors.border,
@@ -176,9 +198,14 @@ class _SweepViewState extends State<SweepView> {
                 children: [
                   Icon(icon, color: color, size: 22),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
                     decoration: BoxDecoration(
-                      color: isSelected ? color.withValues(alpha: 0.25) : AppColors.bgCard,
+                      color: isSelected
+                          ? color.withValues(alpha: 0.25)
+                          : AppColors.bgCard,
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
@@ -186,7 +213,9 @@ class _SweepViewState extends State<SweepView> {
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
-                        color: isSelected ? AppColors.textPrimary : AppColors.textSecondary,
+                        color: isSelected
+                            ? AppColors.textPrimary
+                            : AppColors.textSecondary,
                       ),
                     ),
                   ),
@@ -195,7 +224,11 @@ class _SweepViewState extends State<SweepView> {
               const SizedBox(height: 12),
               Text(
                 title,
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
               ),
               const SizedBox(height: 2),
               Text(
@@ -258,25 +291,35 @@ class _SweepViewState extends State<SweepView> {
           children: [
             Text(
               title,
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary,
+              ),
             ),
             if (items.isNotEmpty)
               FilledButton.icon(
                 style: FilledButton.styleFrom(
                   backgroundColor: AppColors.danger,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
                 onPressed: () {
                   showDialog(
                     context: context,
                     builder: (dialogCtx) => DeleteConfirmationDialog(
                       items: items,
-                      onConfirm: () => context.read<StorageBloc>().add(DeleteMultipleItemsRequested(items)),
+                      onConfirm: () => context.read<StorageBloc>().add(
+                        DeleteMultipleItemsRequested(items),
+                      ),
                     ),
                   );
                 },
                 icon: const Icon(Icons.delete_sweep_rounded, size: 18),
-                label: Text('Clean All (${FileSizeFormatter.format(totalBytes)})'),
+                label: Text(
+                  'Clean All (${FileSizeFormatter.format(totalBytes)})',
+                ),
               ),
           ],
         ),
@@ -292,11 +335,18 @@ class _SweepViewState extends State<SweepView> {
             ),
             child: Column(
               children: [
-                Icon(Icons.check_circle_outline_rounded, size: 44, color: AppColors.success),
+                Icon(
+                  Icons.check_circle_outline_rounded,
+                  size: 44,
+                  color: AppColors.success,
+                ),
                 const SizedBox(height: 12),
                 Text(
                   emptyMessage,
-                  style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
               ],
             ),
@@ -305,7 +355,7 @@ class _SweepViewState extends State<SweepView> {
           ListView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: items.length,
+            itemCount: math.min(items.length, _maxRows),
             itemBuilder: (context, index) {
               final item = items[index];
               return FileListTile(
@@ -315,18 +365,32 @@ class _SweepViewState extends State<SweepView> {
                     context: context,
                     builder: (dialogCtx) => DeleteConfirmationDialog(
                       items: [item],
-                      onConfirm: () => context.read<StorageBloc>().add(DeleteSingleItemRequested(item)),
+                      onConfirm: () => context.read<StorageBloc>().add(
+                        DeleteSingleItemRequested(item),
+                      ),
                     ),
                   );
                 },
               );
             },
           ),
+        if (items.length > _maxRows) _moreNote(items.length),
       ],
     );
   }
 
-  Widget _buildEmptyFoldersSection(BuildContext context, List<String> emptyDirs) {
+  Widget _moreNote(int total) => Padding(
+    padding: const EdgeInsets.only(top: 4),
+    child: Text(
+      'Showing the first $_maxRows of $total. Bulk actions above apply to all $total.',
+      style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+    ),
+  );
+
+  Widget _buildEmptyFoldersSection(
+    BuildContext context,
+    List<String> emptyDirs,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -335,15 +399,23 @@ class _SweepViewState extends State<SweepView> {
           children: [
             Text(
               'Empty Folders (Ghost Directories)',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary,
+              ),
             ),
             if (emptyDirs.isNotEmpty)
               FilledButton.icon(
                 style: FilledButton.styleFrom(
                   backgroundColor: AppColors.danger,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
-                onPressed: () => context.read<StorageBloc>().add(DeleteEmptyDirectoriesRequested(emptyDirs)),
+                onPressed: () => context.read<StorageBloc>().add(
+                  DeleteEmptyDirectoriesRequested(emptyDirs),
+                ),
                 icon: const Icon(Icons.folder_delete_rounded, size: 18),
                 label: Text('Delete All (${emptyDirs.length} folders)'),
               ),
@@ -361,11 +433,18 @@ class _SweepViewState extends State<SweepView> {
             ),
             child: Column(
               children: [
-                Icon(Icons.check_circle_outline_rounded, size: 44, color: AppColors.success),
+                Icon(
+                  Icons.check_circle_outline_rounded,
+                  size: 44,
+                  color: AppColors.success,
+                ),
                 SizedBox(height: 12),
                 Text(
                   'No empty folders found!',
-                  style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
               ],
             ),
@@ -374,12 +453,15 @@ class _SweepViewState extends State<SweepView> {
           ListView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: emptyDirs.length,
+            itemCount: math.min(emptyDirs.length, _maxRows),
             itemBuilder: (context, index) {
               final dir = emptyDirs[index];
               return Container(
                 margin: const EdgeInsets.only(bottom: 8),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.bgCard,
                   borderRadius: BorderRadius.circular(12),
@@ -387,12 +469,19 @@ class _SweepViewState extends State<SweepView> {
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.folder_outlined, color: AppColors.catCode, size: 22),
+                    Icon(
+                      Icons.folder_outlined,
+                      color: AppColors.catCode,
+                      size: 22,
+                    ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
                         dir,
-                        style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: AppColors.textPrimary,
+                        ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -400,13 +489,16 @@ class _SweepViewState extends State<SweepView> {
                     IconButton(
                       icon: const Icon(Icons.delete_outline_rounded, size: 18),
                       color: AppColors.danger,
-                      onPressed: () => context.read<StorageBloc>().add(DeleteEmptyDirectoriesRequested([dir])),
+                      onPressed: () => context.read<StorageBloc>().add(
+                        DeleteEmptyDirectoriesRequested([dir]),
+                      ),
                     ),
                   ],
                 ),
               );
             },
           ),
+        if (emptyDirs.length > _maxRows) _moreNote(emptyDirs.length),
       ],
     );
   }

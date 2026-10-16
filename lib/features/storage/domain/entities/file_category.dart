@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../../core/theme/app_colors.dart';
 
 enum FileCategory {
@@ -99,33 +100,121 @@ extension FileCategoryExt on FileCategory {
 
   static FileCategory fromExtension(String ext) {
     final cleanExt = ext.toLowerCase().replaceFirst('.', '');
-    
+
     // Videos
-    if (const {'mp4', 'mkv', 'mov', 'avi', 'wmv', 'flv', 'webm', 'm4v', '3gp'}.contains(cleanExt)) {
+    if (const {
+      'mp4',
+      'mkv',
+      'mov',
+      'avi',
+      'wmv',
+      'flv',
+      'webm',
+      'm4v',
+      '3gp',
+    }.contains(cleanExt)) {
       return FileCategory.video;
     }
     // Images
-    if (const {'jpg', 'jpeg', 'png', 'gif', 'svg', 'webp', 'bmp', 'tiff', 'heic', 'ico', 'raw'}.contains(cleanExt)) {
+    if (const {
+      'jpg',
+      'jpeg',
+      'png',
+      'gif',
+      'svg',
+      'webp',
+      'bmp',
+      'tiff',
+      'heic',
+      'ico',
+      'raw',
+    }.contains(cleanExt)) {
       return FileCategory.image;
     }
     // Audio
-    if (const {'mp3', 'wav', 'flac', 'aac', 'ogg', 'm4a', 'wma', 'alac'}.contains(cleanExt)) {
+    if (const {
+      'mp3',
+      'wav',
+      'flac',
+      'aac',
+      'ogg',
+      'm4a',
+      'wma',
+      'alac',
+    }.contains(cleanExt)) {
       return FileCategory.audio;
     }
     // Documents
-    if (const {'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'rtf', 'csv', 'md', 'epub'}.contains(cleanExt)) {
+    if (const {
+      'pdf',
+      'doc',
+      'docx',
+      'xls',
+      'xlsx',
+      'ppt',
+      'pptx',
+      'txt',
+      'rtf',
+      'csv',
+      'md',
+      'epub',
+    }.contains(cleanExt)) {
       return FileCategory.document;
     }
     // Archives
-    if (const {'zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz', 'iso', 'tgz'}.contains(cleanExt)) {
+    if (const {
+      'zip',
+      'rar',
+      '7z',
+      'tar',
+      'gz',
+      'bz2',
+      'xz',
+      'iso',
+      'tgz',
+    }.contains(cleanExt)) {
       return FileCategory.archive;
     }
     // Installers
-    if (const {'dmg', 'pkg', 'exe', 'msi', 'deb', 'rpm', 'appimage', 'apk', 'ipa'}.contains(cleanExt)) {
+    if (const {
+      'dmg',
+      'pkg',
+      'exe',
+      'msi',
+      'deb',
+      'rpm',
+      'appimage',
+      'apk',
+      'ipa',
+    }.contains(cleanExt)) {
       return FileCategory.installer;
     }
     // Code & Dev
-    if (const {'dart', 'js', 'ts', 'jsx', 'tsx', 'py', 'rs', 'go', 'java', 'c', 'cpp', 'h', 'swift', 'kt', 'html', 'css', 'scss', 'json', 'yaml', 'yml', 'xml', 'sql', 'sh'}.contains(cleanExt)) {
+    if (const {
+      'dart',
+      'js',
+      'ts',
+      'jsx',
+      'tsx',
+      'py',
+      'rs',
+      'go',
+      'java',
+      'c',
+      'cpp',
+      'h',
+      'swift',
+      'kt',
+      'html',
+      'css',
+      'scss',
+      'json',
+      'yaml',
+      'yml',
+      'xml',
+      'sql',
+      'sh',
+    }.contains(cleanExt)) {
       return FileCategory.code;
     }
 

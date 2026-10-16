@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/system_launcher.dart';
 import '../../domain/entities/file_category.dart';
@@ -30,7 +31,9 @@ class FileListTile extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary.withValues(alpha: 0.12) : AppColors.bgCard,
+          color: isSelected
+              ? AppColors.primary.withValues(alpha: 0.12)
+              : AppColors.bgCard,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected ? AppColors.primary : AppColors.border,
@@ -71,7 +74,10 @@ class FileListTile extends StatelessWidget {
                 ),
                 const SizedBox(width: 6),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.bgCardHover,
                     borderRadius: BorderRadius.circular(6),
@@ -96,16 +102,24 @@ class FileListTile extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 5,
+                        vertical: 1.5,
+                      ),
                       decoration: BoxDecoration(
                         color: item.category.color.withValues(alpha: 0.16),
                         borderRadius: BorderRadius.circular(4),
-                        border: Border.all(color: item.category.color.withValues(alpha: 0.3)),
+                        border: Border.all(
+                          color: item.category.color.withValues(alpha: 0.3),
+                        ),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(item.category.emoji, style: const TextStyle(fontSize: 9)),
+                          Text(
+                            item.category.emoji,
+                            style: const TextStyle(fontSize: 9),
+                          ),
                           const SizedBox(width: 3),
                           Text(
                             item.category.label,
@@ -132,11 +146,16 @@ class FileListTile extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     InkWell(
-                      onTap: () => SystemLauncher.revealInFileManager(item.path),
+                      onTap: () =>
+                          SystemLauncher.revealInFileManager(item.path),
                       borderRadius: BorderRadius.circular(6),
                       child: Padding(
                         padding: const EdgeInsets.all(4),
-                        child: Icon(Icons.folder_open_rounded, size: 16, color: AppColors.textSecondary),
+                        child: Icon(
+                          Icons.folder_open_rounded,
+                          size: 16,
+                          color: AppColors.textSecondary,
+                        ),
                       ),
                     ),
                     if (onDelete != null) ...[
@@ -146,7 +165,11 @@ class FileListTile extends StatelessWidget {
                         borderRadius: BorderRadius.circular(6),
                         child: const Padding(
                           padding: EdgeInsets.all(4),
-                          child: Icon(Icons.delete_outline_rounded, size: 16, color: AppColors.danger),
+                          child: Icon(
+                            Icons.delete_outline_rounded,
+                            size: 16,
+                            color: AppColors.danger,
+                          ),
                         ),
                       ),
                     ],
@@ -164,7 +187,9 @@ class FileListTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: isSelected ? AppColors.primary.withValues(alpha: 0.12) : AppColors.bgCard,
+        color: isSelected
+            ? AppColors.primary.withValues(alpha: 0.12)
+            : AppColors.bgCard,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isSelected ? AppColors.primary : AppColors.border,
@@ -181,7 +206,9 @@ class FileListTile extends StatelessWidget {
                 onChanged: onSelectChanged,
                 activeColor: AppColors.primary,
                 checkColor: AppColors.onPrimary,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(4),
+                ),
                 side: BorderSide(color: AppColors.borderLight, width: 1.5),
               ),
             ),
@@ -221,16 +248,24 @@ class FileListTile extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 7,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: item.category.color.withValues(alpha: 0.16),
                         borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: item.category.color.withValues(alpha: 0.35)),
+                        border: Border.all(
+                          color: item.category.color.withValues(alpha: 0.35),
+                        ),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(item.category.emoji, style: const TextStyle(fontSize: 10)),
+                          Text(
+                            item.category.emoji,
+                            style: const TextStyle(fontSize: 10),
+                          ),
                           const SizedBox(width: 4),
                           Text(
                             item.category.label,
@@ -246,11 +281,16 @@ class FileListTile extends StatelessWidget {
                     if (item.isHidden) ...[
                       const SizedBox(width: 6),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.catArchive.withValues(alpha: 0.16),
                           borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: AppColors.catArchive.withValues(alpha: 0.35)),
+                          border: Border.all(
+                            color: AppColors.catArchive.withValues(alpha: 0.35),
+                          ),
                         ),
                         child: const Row(
                           mainAxisSize: MainAxisSize.min,
@@ -270,11 +310,16 @@ class FileListTile extends StatelessWidget {
                     if (item.isDusty) ...[
                       const SizedBox(width: 6),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.warning.withValues(alpha: 0.18),
                           borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: AppColors.warning.withValues(alpha: 0.4)),
+                          border: Border.all(
+                            color: AppColors.warning.withValues(alpha: 0.4),
+                          ),
                         ),
                         child: const Row(
                           mainAxisSize: MainAxisSize.min,
@@ -328,7 +373,9 @@ class FileListTile extends StatelessWidget {
             decoration: BoxDecoration(
               color: AppColors.bgCardHover,
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppColors.borderLight.withValues(alpha: 0.4)),
+              border: Border.all(
+                color: AppColors.borderLight.withValues(alpha: 0.4),
+              ),
             ),
             child: Text(
               item.formattedSize,

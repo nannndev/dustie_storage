@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+
 import '../../domain/entities/file_category.dart';
 import '../../domain/entities/storage_filter.dart';
 import '../../domain/entities/storage_item.dart';
@@ -50,18 +51,16 @@ class StorageFilterCubit extends Cubit<StorageFilter> {
       if (state.minAgeDays != null && item.ageInDays < state.minAgeDays!) {
         return false;
       }
-      if (query.isNotEmpty) {
-        final matchesName = item.name.toLowerCase().contains(query);
-        final matchesPath = item.path.toLowerCase().contains(query);
-        if (!matchesName && !matchesPath) return false;
+      // Path already contains the name, so one lowercase per item is enough
+      if (query.isNotEmpty && !item.path.toLowerCase().contains(query)) {
+        return false;
       }
       return true;
     }).toList();
 
     switch (state.sortOption) {
       case SortOption.sizeDesc:
-        filtered.sort((a, b) => b.size.compareTo(a.size));
-        break;
+        break; // source list is already largest-first
       case SortOption.sizeAsc:
         filtered.sort((a, b) => a.size.compareTo(b.size));
         break;
@@ -72,7 +71,9 @@ class StorageFilterCubit extends Cubit<StorageFilter> {
         filtered.sort((a, b) => a.modified.compareTo(b.modified));
         break;
       case SortOption.nameAsc:
-        filtered.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+        filtered.sort(
+          (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+        );
         break;
     }
 

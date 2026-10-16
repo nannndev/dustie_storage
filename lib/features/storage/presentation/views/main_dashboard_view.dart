@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/theme_cubit.dart';
 import '../../../navigation/presentation/cubit/navigation_cubit.dart';
@@ -68,7 +69,9 @@ class MainDashboardView extends StatelessWidget {
                           },
                         ),
                         BlocBuilder<StorageBloc, StorageState>(
-                          buildWhen: (a, b) => a.isScanning != b.isScanning || a.statusMessage != b.statusMessage,
+                          buildWhen: (a, b) =>
+                              a.isScanning != b.isScanning ||
+                              a.statusMessage != b.statusMessage,
                           builder: (context, state) {
                             return AnimatedSwitcher(
                               duration: const Duration(milliseconds: 300),
@@ -76,7 +79,9 @@ class MainDashboardView extends StatelessWidget {
                                   ? ScanningOverlay(
                                       key: const ValueKey('scanning'),
                                       statusMessage: state.statusMessage,
-                                      onCancel: () => context.read<StorageBloc>().add(const CancelScanRequested()),
+                                      onCancel: () => context
+                                          .read<StorageBloc>()
+                                          .add(const CancelScanRequested()),
                                     )
                                   : const SizedBox.shrink(),
                             );
@@ -103,6 +108,10 @@ class MainDashboardView extends StatelessWidget {
       ),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       child: BlocBuilder<StorageBloc, StorageState>(
+        buildWhen: (a, b) =>
+            !identical(a.summary, b.summary) ||
+            a.isScanning != b.isScanning ||
+            a.currentPath != b.currentPath,
         builder: (context, storageState) {
           return BlocBuilder<NavigationCubit, int>(
             builder: (context, activeIndex) {
@@ -116,7 +125,9 @@ class MainDashboardView extends StatelessWidget {
                     children: [
                       DustieMascot(
                         size: 38,
-                        mood: storageState.isScanning ? DustieMood.scanning : DustieMood.happy,
+                        mood: storageState.isScanning
+                            ? DustieMood.scanning
+                            : DustieMood.happy,
                         animate: true,
                       ),
                       const SizedBox(width: 12),
@@ -211,7 +222,11 @@ class MainDashboardView extends StatelessWidget {
                             color: AppColors.primary.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: Icon(Icons.auto_awesome_rounded, color: AppColors.primaryLight, size: 16),
+                          child: Icon(
+                            Icons.auto_awesome_rounded,
+                            color: AppColors.primaryLight,
+                            size: 16,
+                          ),
                         ),
                         const SizedBox(width: 10),
                         Expanded(
@@ -220,11 +235,18 @@ class MainDashboardView extends StatelessWidget {
                             children: [
                               Text(
                                 'AI Assistant',
-                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.textPrimary,
+                                ),
                               ),
                               Text(
                                 'Stage 2: Coming Soon',
-                                style: TextStyle(fontSize: 10, color: AppColors.textMuted),
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: AppColors.textMuted,
+                                ),
                               ),
                             ],
                           ),
@@ -261,10 +283,14 @@ class MainDashboardView extends StatelessWidget {
           duration: const Duration(milliseconds: 150),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
           decoration: BoxDecoration(
-            color: isSelected ? AppColors.primary.withValues(alpha: 0.16) : Colors.transparent,
+            color: isSelected
+                ? AppColors.primary.withValues(alpha: 0.16)
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: isSelected ? AppColors.primary.withValues(alpha: 0.5) : Colors.transparent,
+              color: isSelected
+                  ? AppColors.primary.withValues(alpha: 0.5)
+                  : Colors.transparent,
             ),
           ),
           child: Row(
@@ -272,7 +298,9 @@ class MainDashboardView extends StatelessWidget {
               Icon(
                 icon,
                 size: 20,
-                color: isSelected ? AppColors.primaryLight : AppColors.textSecondary,
+                color: isSelected
+                    ? AppColors.primaryLight
+                    : AppColors.textSecondary,
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -281,20 +309,33 @@ class MainDashboardView extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                    color: isSelected ? AppColors.textPrimary : AppColors.textSecondary,
+                    color: isSelected
+                        ? AppColors.textPrimary
+                        : AppColors.textSecondary,
                   ),
                 ),
               ),
               if (badge > 0)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 7,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
-                    color: isSelected ? AppColors.primary : AppColors.bgCardHover,
+                    color: isSelected
+                        ? AppColors.primary
+                        : AppColors.bgCardHover,
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
                     badge.toString(),
-                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: isSelected ? AppColors.onPrimary : AppColors.textPrimary),
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: isSelected
+                          ? AppColors.onPrimary
+                          : AppColors.textPrimary,
+                    ),
                   ),
                 ),
             ],
@@ -324,9 +365,11 @@ class MainDashboardView extends StatelessWidget {
                       ...state.locations.map((loc) {
                         final isCurrent = state.currentPath == loc.path;
                         IconData iconData = Icons.folder_rounded;
-                        if (loc.name.contains('Entire') || loc.name.contains('Root')) {
+                        if (loc.name.contains('Entire') ||
+                            loc.name.contains('Root')) {
                           iconData = Icons.dns_rounded;
-                        } else if (loc.name.contains('Caches') || loc.name.contains('AppData')) {
+                        } else if (loc.name.contains('Caches') ||
+                            loc.name.contains('AppData')) {
                           iconData = Icons.layers_rounded;
                         } else if (loc.name.contains('Home')) {
                           iconData = Icons.home_rounded;
@@ -346,29 +389,56 @@ class MainDashboardView extends StatelessWidget {
                             avatar: Icon(
                               iconData,
                               size: 15,
-                              color: isCurrent ? AppColors.onPrimary : AppColors.primaryLight,
+                              color: isCurrent
+                                  ? AppColors.onPrimary
+                                  : AppColors.primaryLight,
                             ),
                             label: Text(loc.name),
                             labelStyle: TextStyle(
                               fontSize: 12,
-                              fontWeight: isCurrent ? FontWeight.w700 : FontWeight.w500,
-                              color: isCurrent ? AppColors.onPrimary : AppColors.textSecondary,
+                              fontWeight: isCurrent
+                                  ? FontWeight.w700
+                                  : FontWeight.w500,
+                              color: isCurrent
+                                  ? AppColors.onPrimary
+                                  : AppColors.textSecondary,
                             ),
-                            backgroundColor: isCurrent ? AppColors.primary : AppColors.bgCard,
-                            side: BorderSide(color: isCurrent ? AppColors.primary : AppColors.border),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                            onPressed: () => context.read<StorageBloc>().add(StartScanRequested(loc.path)),
+                            backgroundColor: isCurrent
+                                ? AppColors.primary
+                                : AppColors.bgCard,
+                            side: BorderSide(
+                              color: isCurrent
+                                  ? AppColors.primary
+                                  : AppColors.border,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            onPressed: () => context.read<StorageBloc>().add(
+                              StartScanRequested(loc.path),
+                            ),
                           ),
                         );
                       }),
                       ActionChip(
-                        avatar: Icon(Icons.folder_open_rounded, size: 15, color: AppColors.textSecondary),
+                        avatar: Icon(
+                          Icons.folder_open_rounded,
+                          size: 15,
+                          color: AppColors.textSecondary,
+                        ),
                         label: const Text('Pick Folder...'),
-                        labelStyle: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                        labelStyle: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
+                        ),
                         backgroundColor: AppColors.bgCard,
                         side: BorderSide(color: AppColors.border),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        onPressed: () => context.read<StorageBloc>().add(const PickAndScanCustomFolderRequested()),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        onPressed: () => context.read<StorageBloc>().add(
+                          const PickAndScanCustomFolderRequested(),
+                        ),
                       ),
                     ],
                   ),
@@ -388,10 +458,16 @@ class MainDashboardView extends StatelessWidget {
                       border: Border.all(color: AppColors.border),
                     ),
                     child: IconButton(
-                      tooltip: isDark ? 'Switch to Cartoon Light Mode ☀️' : 'Switch to Cozy Dark Mode 🌙',
+                      tooltip: isDark
+                          ? 'Switch to Cartoon Light Mode ☀️'
+                          : 'Switch to Cozy Dark Mode 🌙',
                       icon: Icon(
-                        isDark ? Icons.wb_sunny_rounded : Icons.nightlight_round,
-                        color: isDark ? AppColors.warning : AppColors.primaryLight,
+                        isDark
+                            ? Icons.wb_sunny_rounded
+                            : Icons.nightlight_round,
+                        color: isDark
+                            ? AppColors.warning
+                            : AppColors.primaryLight,
                         size: 18,
                       ),
                       onPressed: () => context.read<ThemeCubit>().toggleTheme(),
@@ -419,26 +495,45 @@ class MainDashboardView extends StatelessWidget {
                     state.statusMessage,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textSecondary,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 10),
                 IconButton(
-                  icon: Icon(Icons.stop_circle_rounded, color: AppColors.danger, size: 22),
+                  icon: Icon(
+                    Icons.stop_circle_rounded,
+                    color: AppColors.danger,
+                    size: 22,
+                  ),
                   tooltip: 'Cancel Scan',
-                  onPressed: () => context.read<StorageBloc>().add(const CancelScanRequested()),
+                  onPressed: () => context.read<StorageBloc>().add(
+                    const CancelScanRequested(),
+                  ),
                 ),
               ] else ...[
                 FilledButton.icon(
                   style: FilledButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: AppColors.onPrimary,
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
-                  onPressed: () => context.read<StorageBloc>().add(StartScanRequested(state.currentPath)),
+                  onPressed: () => context.read<StorageBloc>().add(
+                    StartScanRequested(state.currentPath),
+                  ),
                   icon: const Icon(Icons.refresh_rounded, size: 18),
-                  label: const Text('Re-scan', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                  label: const Text(
+                    'Re-scan',
+                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                  ),
                 ),
               ],
             ],

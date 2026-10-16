@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../../core/theme/app_colors.dart';
 
 class DustieSpeechBubble extends StatelessWidget {
@@ -23,7 +24,10 @@ class DustieSpeechBubble extends StatelessWidget {
           bottomRight: Radius.circular(16),
           bottomLeft: Radius.circular(4),
         ),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.4), width: 1.5),
+        border: Border.all(
+          color: AppColors.primary.withValues(alpha: 0.4),
+          width: 1.5,
+        ),
         boxShadow: [
           BoxShadow(
             color: AppColors.primary.withValues(alpha: 0.15),

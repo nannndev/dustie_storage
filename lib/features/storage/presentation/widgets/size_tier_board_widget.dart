@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/file_size_formatter.dart';
 import '../../domain/entities/storage_item.dart';
@@ -19,17 +20,24 @@ class SizeTierBoardWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final titanFiles = allFiles.where((f) => f.size >= 1024 * 1024 * 1024).toList()
-      ..sort((a, b) => b.size.compareTo(a.size));
+    // allFiles is already largest-first, and where() keeps that order
+    final titanFiles = allFiles
+        .where((f) => f.size >= 1024 * 1024 * 1024)
+        .toList();
 
-    final heavyFiles = allFiles.where((f) => f.size >= 500 * 1024 * 1024 && f.size < 1024 * 1024 * 1024).toList()
-      ..sort((a, b) => b.size.compareTo(a.size));
+    final heavyFiles = allFiles
+        .where(
+          (f) => f.size >= 500 * 1024 * 1024 && f.size < 1024 * 1024 * 1024,
+        )
+        .toList();
 
-    final moderateFiles = allFiles.where((f) => f.size >= 100 * 1024 * 1024 && f.size < 500 * 1024 * 1024).toList()
-      ..sort((a, b) => b.size.compareTo(a.size));
+    final moderateFiles = allFiles
+        .where((f) => f.size >= 100 * 1024 * 1024 && f.size < 500 * 1024 * 1024)
+        .toList();
 
-    final featherFiles = allFiles.where((f) => f.size < 100 * 1024 * 1024).toList()
-      ..sort((a, b) => b.size.compareTo(a.size));
+    final featherFiles = allFiles
+        .where((f) => f.size < 100 * 1024 * 1024)
+        .toList();
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -45,22 +53,42 @@ class SizeTierBoardWidget extends StatelessWidget {
               children: [
                 SizedBox(
                   width: colWidth,
-                  child: _buildTierColumn(context, '🐋 Titan (> 1 GB)', titanFiles, AppColors.tierTitan),
+                  child: _buildTierColumn(
+                    context,
+                    '🐋 Titan (> 1 GB)',
+                    titanFiles,
+                    AppColors.tierTitan,
+                  ),
                 ),
                 const SizedBox(width: 14),
                 SizedBox(
                   width: colWidth,
-                  child: _buildTierColumn(context, '🦣 Heavy (500MB - 1GB)', heavyFiles, AppColors.tierHeavy),
+                  child: _buildTierColumn(
+                    context,
+                    '🦣 Heavy (500MB - 1GB)',
+                    heavyFiles,
+                    AppColors.tierHeavy,
+                  ),
                 ),
                 const SizedBox(width: 14),
                 SizedBox(
                   width: colWidth,
-                  child: _buildTierColumn(context, '🦊 Moderate (100 - 500MB)', moderateFiles, AppColors.tierModerate),
+                  child: _buildTierColumn(
+                    context,
+                    '🦊 Moderate (100 - 500MB)',
+                    moderateFiles,
+                    AppColors.tierModerate,
+                  ),
                 ),
                 const SizedBox(width: 14),
                 SizedBox(
                   width: colWidth,
-                  child: _buildTierColumn(context, '🐣 Feather (< 100MB)', featherFiles, AppColors.tierFeather),
+                  child: _buildTierColumn(
+                    context,
+                    '🐣 Feather (< 100MB)',
+                    featherFiles,
+                    AppColors.tierFeather,
+                  ),
                 ),
               ],
             ),
@@ -70,7 +98,12 @@ class SizeTierBoardWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildTierColumn(BuildContext context, String title, List<StorageItem> files, Color color) {
+  Widget _buildTierColumn(
+    BuildContext context,
+    String title,
+    List<StorageItem> files,
+    Color color,
+  ) {
     final totalBytes = files.fold<int>(0, (s, i) => s + i.size);
 
     return Container(
@@ -90,7 +123,11 @@ class SizeTierBoardWidget extends StatelessWidget {
               Flexible(
                 child: Text(
                   title,
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: color),
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: color,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -104,7 +141,11 @@ class SizeTierBoardWidget extends StatelessWidget {
                 ),
                 child: Text(
                   FileSizeFormatter.format(totalBytes),
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: color),
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    color: color,
+                  ),
                 ),
               ),
             ],
@@ -133,7 +174,10 @@ class SizeTierBoardWidget extends StatelessWidget {
                       ),
                     );
                   },
-                  child: const Text('Clean All', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+                  child: const Text(
+                    'Clean All',
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+                  ),
                 ),
             ],
           ),
@@ -167,7 +211,8 @@ class SizeTierBoardWidget extends StatelessWidget {
                   final item = files[index];
                   return FileListTile(
                     item: item,
-                    isCompact: true, // Compact mode fixes any horizontal overflow!
+                    isCompact:
+                        true, // Compact mode fixes any horizontal overflow!
                     onDelete: () {
                       showDialog(
                         context: context,

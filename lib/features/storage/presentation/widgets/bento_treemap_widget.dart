@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/system_launcher.dart';
 import '../../domain/entities/bento_node.dart';
@@ -33,7 +34,11 @@ class BentoTreemapWidget extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
               'No items in ${rootNode.name}',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textSecondary),
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textSecondary,
+              ),
             ),
           ],
         ),
@@ -45,7 +50,11 @@ class BentoTreemapWidget extends StatelessWidget {
         final area = constraints.biggest;
         final totalAreaSize = rootNode.size > 0 ? rootNode.size : 1;
         final visible = fitChildren(rootNode, area);
-        final rects = _calculateSquarifiedTreemap(visible, Offset.zero & area, totalAreaSize);
+        final rects = _calculateSquarifiedTreemap(
+          visible,
+          Offset.zero & area,
+          totalAreaSize,
+        );
 
         return Stack(
           children: rects.map((entry) {
@@ -62,7 +71,9 @@ class BentoTreemapWidget extends StatelessWidget {
                 node: entry.node,
                 ratio: entry.node.size / totalAreaSize * 100,
                 onOpen: () => _open(context, entry.node),
-                onDelete: onDeleteNode == null || entry.node.isGroup ? null : () => onDeleteNode!(entry.node),
+                onDelete: onDeleteNode == null || entry.node.isGroup
+                    ? null
+                    : () => onDeleteNode!(entry.node),
               ),
             );
           }).toList(),
@@ -122,7 +133,11 @@ class BentoTreemapWidget extends StatelessWidget {
         ),
         title: Text(
           '${group.itemCount} smaller items • ${group.formattedSize}',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w800,
+            color: AppColors.textPrimary,
+          ),
         ),
         content: SizedBox(
           width: 460,
@@ -131,24 +146,43 @@ class BentoTreemapWidget extends StatelessWidget {
             itemCount: group.children.length,
             itemBuilder: (_, i) {
               final node = group.children[i];
-              final color = node.isDirectory ? AppColors.primary : node.category.color;
+              final color = node.isDirectory
+                  ? AppColors.primary
+                  : node.category.color;
               return ListTile(
                 dense: true,
-                leading: Icon(node.isDirectory ? Icons.folder_rounded : node.category.icon, color: color, size: 20),
+                leading: Icon(
+                  node.isDirectory ? Icons.folder_rounded : node.category.icon,
+                  color: color,
+                  size: 20,
+                ),
                 title: Text(
                   node.name,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
                 ),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(node.formattedSize, style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                    Text(
+                      node.formattedSize,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
                     if (onDeleteNode != null)
                       IconButton(
                         tooltip: 'Delete',
-                        icon: Icon(Icons.delete_outline_rounded, size: 18, color: AppColors.danger),
+                        icon: Icon(
+                          Icons.delete_outline_rounded,
+                          size: 18,
+                          color: AppColors.danger,
+                        ),
                         onPressed: () {
                           Navigator.of(dialogCtx).pop();
                           onDeleteNode!(node);
@@ -165,7 +199,10 @@ class BentoTreemapWidget extends StatelessWidget {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(dialogCtx).pop(), child: const Text('Close')),
+          TextButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(),
+            child: const Text('Close'),
+          ),
         ],
       ),
     );
@@ -177,7 +214,10 @@ class BentoTreemapWidget extends StatelessWidget {
     Rect containerRect,
     int totalBytes,
   ) {
-    if (nodes.isEmpty || totalBytes <= 0 || containerRect.width <= 0 || containerRect.height <= 0) {
+    if (nodes.isEmpty ||
+        totalBytes <= 0 ||
+        containerRect.width <= 0 ||
+        containerRect.height <= 0) {
       return [];
     }
 
@@ -220,7 +260,9 @@ class BentoTreemapWidget extends StatelessWidget {
 
     final leftSize = leftGroup.fold<int>(0, (s, n) => s + n.size);
     final rightSize = rightGroup.fold<int>(0, (s, n) => s + n.size);
-    final ratio = totalSize > 0 ? (leftSize / totalSize).clamp(0.05, 0.95) : 0.5;
+    final ratio = totalSize > 0
+        ? (leftSize / totalSize).clamp(0.05, 0.95)
+        : 0.5;
 
     Rect leftRect;
     Rect rightRect;
@@ -231,15 +273,31 @@ class BentoTreemapWidget extends StatelessWidget {
     if (splitHorizontal) {
       final leftWidth = rect.width * ratio;
       leftRect = Rect.fromLTWH(rect.left, rect.top, leftWidth, rect.height);
-      rightRect = Rect.fromLTWH(rect.left + leftWidth, rect.top, rect.width - leftWidth, rect.height);
+      rightRect = Rect.fromLTWH(
+        rect.left + leftWidth,
+        rect.top,
+        rect.width - leftWidth,
+        rect.height,
+      );
     } else {
       final topHeight = rect.height * ratio;
       leftRect = Rect.fromLTWH(rect.left, rect.top, rect.width, topHeight);
-      rightRect = Rect.fromLTWH(rect.left, rect.top + topHeight, rect.width, rect.height - topHeight);
+      rightRect = Rect.fromLTWH(
+        rect.left,
+        rect.top + topHeight,
+        rect.width,
+        rect.height - topHeight,
+      );
     }
 
     _layoutRecursive(leftGroup, leftRect, leftSize, result, !splitHorizontal);
-    _layoutRecursive(rightGroup, rightRect, rightSize, result, !splitHorizontal);
+    _layoutRecursive(
+      rightGroup,
+      rightRect,
+      rightSize,
+      result,
+      !splitHorizontal,
+    );
   }
 }
 
@@ -255,7 +313,12 @@ class _BentoTile extends StatefulWidget {
   final VoidCallback onOpen;
   final VoidCallback? onDelete;
 
-  const _BentoTile({required this.node, required this.ratio, required this.onOpen, this.onDelete});
+  const _BentoTile({
+    required this.node,
+    required this.ratio,
+    required this.onOpen,
+    this.onDelete,
+  });
 
   @override
   State<_BentoTile> createState() => _BentoTileState();
@@ -269,39 +332,64 @@ class _BentoTileState extends State<_BentoTile> {
   Color get _color => node.isGroup
       ? AppColors.catOther
       : node.isDirectory
-          ? AppColors.primary
-          : node.category.color;
+      ? AppColors.primary
+      : node.category.color;
 
   IconData get _icon => node.isGroup
       ? Icons.more_horiz_rounded
       : node.isDirectory
-          ? Icons.folder_rounded
-          : node.category.icon;
+      ? Icons.folder_rounded
+      : node.category.icon;
 
   String get _hint => node.isGroup
       ? 'Click to list'
       : node.isDirectory
-          ? 'Click to open • Right-click for more'
-          : 'Click to reveal • Right-click for more';
+      ? 'Click to open • Right-click for more'
+      : 'Click to reveal • Right-click for more';
 
   Future<void> _showMenu(Offset position) async {
     final action = await showMenu<String>(
       context: context,
-      position: RelativeRect.fromLTRB(position.dx, position.dy, position.dx, position.dy),
+      position: RelativeRect.fromLTRB(
+        position.dx,
+        position.dy,
+        position.dx,
+        position.dy,
+      ),
       color: AppColors.bgSidebar,
       items: [
         PopupMenuItem(
           value: 'open',
           child: _menuRow(
-            node.isGroup ? Icons.list_rounded : (node.isDirectory ? Icons.folder_open_rounded : Icons.search_rounded),
-            node.isGroup ? 'Show items' : (node.isDirectory ? 'Open folder' : 'Reveal in file manager'),
+            node.isGroup
+                ? Icons.list_rounded
+                : (node.isDirectory
+                      ? Icons.folder_open_rounded
+                      : Icons.search_rounded),
+            node.isGroup
+                ? 'Show items'
+                : (node.isDirectory ? 'Open folder' : 'Reveal in file manager'),
             AppColors.textPrimary,
           ),
         ),
         if (node.isDirectory && !node.isGroup)
-          PopupMenuItem(value: 'reveal', child: _menuRow(Icons.search_rounded, 'Reveal in file manager', AppColors.textPrimary)),
+          PopupMenuItem(
+            value: 'reveal',
+            child: _menuRow(
+              Icons.search_rounded,
+              'Reveal in file manager',
+              AppColors.textPrimary,
+            ),
+          ),
         if (widget.onDelete != null)
-          PopupMenuItem(value: 'delete', child: _menuRow(Icons.delete_outline_rounded, 'Delete…', AppColors.danger)),
+          PopupMenuItem(
+            value: 'delete',
+            child: _menuRow(
+              Icons.delete_outline_rounded,
+              'Delete…',
+              AppColors.danger,
+            ),
+          ),
       ],
     );
     if (!mounted) return;
@@ -316,12 +404,12 @@ class _BentoTileState extends State<_BentoTile> {
   }
 
   Widget _menuRow(IconData icon, String label, Color color) => Row(
-        children: [
-          Icon(icon, size: 18, color: color),
-          const SizedBox(width: 10),
-          Text(label, style: TextStyle(fontSize: 13, color: color)),
-        ],
-      );
+    children: [
+      Icon(icon, size: 18, color: color),
+      const SizedBox(width: 10),
+      Text(label, style: TextStyle(fontSize: 13, color: color)),
+    ],
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -332,7 +420,8 @@ class _BentoTileState extends State<_BentoTile> {
       onEnter: (_) => setState(() => _hover = true),
       onExit: (_) => setState(() => _hover = false),
       child: Tooltip(
-        message: '${node.name}\n${node.formattedSize} (${widget.ratio.toStringAsFixed(1)}%)'
+        message:
+            '${node.name}\n${node.formattedSize} (${widget.ratio.toStringAsFixed(1)}%)'
             '${node.isDirectory ? ' • ${node.itemCount} files' : ''}\n$_hint',
         waitDuration: const Duration(milliseconds: 500),
         child: GestureDetector(
@@ -346,7 +435,10 @@ class _BentoTileState extends State<_BentoTile> {
               decoration: BoxDecoration(
                 color: color.withValues(alpha: _hover ? 0.26 : 0.16),
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: color.withValues(alpha: _hover ? 0.95 : 0.55), width: 1.5),
+                border: Border.all(
+                  color: color.withValues(alpha: _hover ? 0.95 : 0.55),
+                  width: 1.5,
+                ),
                 boxShadow: [
                   BoxShadow(
                     color: color.withValues(alpha: _hover ? 0.25 : 0.06),
@@ -358,7 +450,9 @@ class _BentoTileState extends State<_BentoTile> {
               // Clip + size-aware content: nothing can overflow however small the tile gets
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: LayoutBuilder(builder: (context, c) => _buildContent(c.biggest, color)),
+                child: LayoutBuilder(
+                  builder: (context, c) => _buildContent(c.biggest, color),
+                ),
               ),
             ),
           ),
@@ -381,7 +475,12 @@ class _BentoTileState extends State<_BentoTile> {
       node.name,
       maxLines: isFull && h >= 120 ? 2 : 1,
       overflow: TextOverflow.ellipsis,
-      style: TextStyle(fontSize: isFull ? 13 : 11, fontWeight: FontWeight.w700, color: AppColors.textPrimary, height: 1.2),
+      style: TextStyle(
+        fontSize: isFull ? 13 : 11,
+        fontWeight: FontWeight.w700,
+        color: AppColors.textPrimary,
+        height: 1.2,
+      ),
     );
 
     return Padding(
@@ -407,13 +506,20 @@ class _BentoTileState extends State<_BentoTile> {
                   borderRadius: BorderRadius.circular(8),
                   child: Padding(
                     padding: const EdgeInsets.all(4),
-                    child: Icon(Icons.delete_outline_rounded, size: 16, color: AppColors.danger),
+                    child: Icon(
+                      Icons.delete_outline_rounded,
+                      size: 16,
+                      color: AppColors.danger,
+                    ),
                   ),
                 ),
             ],
           ),
           // Child-name pills only when there is clearly room for them
-          if (isFull && h >= 150 && node.isDirectory && node.children.isNotEmpty) ...[
+          if (isFull &&
+              h >= 150 &&
+              node.isDirectory &&
+              node.children.isNotEmpty) ...[
             const SizedBox(height: 8),
             Expanded(
               child: ClipRect(
@@ -424,14 +530,20 @@ class _BentoTileState extends State<_BentoTile> {
                     return ConstrainedBox(
                       constraints: BoxConstraints(maxWidth: w - pad * 2),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.bgCard.withValues(alpha: 0.7),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
                           child.name,
-                          style: TextStyle(fontSize: 10, color: AppColors.textSecondary),
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: AppColors.textSecondary,
+                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -461,14 +573,23 @@ class _BentoTileState extends State<_BentoTile> {
               if (isFull) ...[
                 const Spacer(),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: color.withValues(alpha: 0.25),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
-                    widget.ratio < 0.1 ? '<0.1%' : '${widget.ratio.toStringAsFixed(1)}%',
-                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: color),
+                    widget.ratio < 0.1
+                        ? '<0.1%'
+                        : '${widget.ratio.toStringAsFixed(1)}%',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: color,
+                    ),
                   ),
                 ),
               ],

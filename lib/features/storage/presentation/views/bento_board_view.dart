@@ -24,6 +24,17 @@ class _BentoBoardViewState extends State<BentoBoardView> {
   int _boardModeIndex = 0; // 0: Nested Bento Treemap, 1: Size Tiers
   final List<BentoNode> _navigationStack = [];
 
+  // Memo: hover/mode-switch setState must not rebuild a tree over a million files
+  (String, List<StorageItem>, BentoNode)? _treeCache;
+
+  BentoNode _treeFor(String path, List<StorageItem> files) {
+    final c = _treeCache;
+    if (c != null && c.$1 == path && identical(c.$2, files)) return c.$3;
+    final tree = BentoNode.buildTreeFromItems(path, files);
+    _treeCache = (path, files, tree);
+    return tree;
+  }
+
   void _drillDown(BentoNode node) {
     if (node.isDirectory) {
       setState(() {
@@ -51,28 +62,20 @@ class _BentoBoardViewState extends State<BentoBoardView> {
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<StorageBloc, StorageState>(
+      buildWhen: (a, b) =>
+          !identical(a.summary, b.summary) ||
+          a.isScanning != b.isScanning ||
+          a.currentPath != b.currentPath,
       builder: (context, state) {
         final allFiles = state.summary.files;
 
-        // Build root tree if stack is empty
-        final rootTree = BentoNode.buildTreeFromItems(
-          state.currentPath,
-          allFiles,
-        );
         // Stack holds snapshots; rebuild the current level from fresh data so deletes and rescans show up
         final currentNode = _navigationStack.isEmpty
-            ? rootTree
-            : BentoNode.buildTreeFromItems(
-                _navigationStack.last.path,
-                allFiles,
-              );
+            ? state.summary.rootTree ?? _treeFor(state.currentPath, allFiles)
+            : _treeFor(_navigationStack.last.path, allFiles);
 
         // Dynamic cartoon speech bubble message
-        final largestItem = allFiles.isNotEmpty
-            ? (List<StorageItem>.from(
-                allFiles,
-              )..sort((a, b) => b.size.compareTo(a.size))).first
-            : null;
+        final largestItem = allFiles.isEmpty ? null : allFiles.first;
 
         final speechText = state.isScanning
             ? 'Sedang mengendus file di drive kamu... 🔍'
@@ -359,7 +362,9 @@ class _BentoBoardViewState extends State<BentoBoardView> {
               child: Icon(
                 icon,
                 size: 16,
-                color: isSelected ? AppColors.onPrimary : AppColors.textSecondary,
+                color: isSelected
+                    ? AppColors.onPrimary
+                    : AppColors.textSecondary,
               ),
             ),
             if (!iconOnly) ...[
@@ -369,7 +374,9 @@ class _BentoBoardViewState extends State<BentoBoardView> {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                  color: isSelected ? AppColors.onPrimary : AppColors.textSecondary,
+                  color: isSelected
+                      ? AppColors.onPrimary
+                      : AppColors.textSecondary,
                 ),
               ),
             ],

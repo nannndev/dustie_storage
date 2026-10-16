@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/file_size_formatter.dart';
 import '../../domain/entities/file_category.dart';
@@ -21,10 +24,30 @@ class ClassifierView extends StatefulWidget {
 
 class _ClassifierViewState extends State<ClassifierView> {
   final TextEditingController _searchController = TextEditingController();
+  Timer? _searchDebounce;
   final Set<String> _selectedItemPaths = {};
+
+  // Memo: ticking a checkbox calls setState, which must not re-filter a million files
+  (StorageFilter, List<StorageItem>, List<StorageItem>, int)? _filterCache;
+
+  (List<StorageItem>, int) _filtered(
+    StorageFilterCubit cubit,
+    StorageFilter filter,
+    List<StorageItem> files,
+  ) {
+    final c = _filterCache;
+    if (c != null && c.$1 == filter && identical(c.$2, files)) {
+      return (c.$3, c.$4);
+    }
+    final items = cubit.applyFilter(files);
+    final bytes = items.fold<int>(0, (sum, i) => sum + i.size);
+    _filterCache = (filter, files, items, bytes);
+    return (items, bytes);
+  }
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -40,7 +63,9 @@ class _ClassifierViewState extends State<ClassifierView> {
   }
 
   void _deleteSelected(List<StorageItem> currentList) {
-    final itemsToDelete = currentList.where((i) => _selectedItemPaths.contains(i.path)).toList();
+    final itemsToDelete = currentList
+        .where((i) => _selectedItemPaths.contains(i.path))
+        .toList();
     if (itemsToDelete.isEmpty) return;
 
     showDialog(
@@ -48,7 +73,9 @@ class _ClassifierViewState extends State<ClassifierView> {
       builder: (dialogCtx) => DeleteConfirmationDialog(
         items: itemsToDelete,
         onConfirm: () {
-          context.read<StorageBloc>().add(DeleteMultipleItemsRequested(itemsToDelete));
+          context.read<StorageBloc>().add(
+            DeleteMultipleItemsRequested(itemsToDelete),
+          );
           setState(() {
             _selectedItemPaths.clear();
           });
@@ -60,14 +87,28 @@ class _ClassifierViewState extends State<ClassifierView> {
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<StorageBloc, StorageState>(
+      buildWhen: (a, b) =>
+          !identical(a.summary, b.summary) ||
+          a.isScanning != b.isScanning ||
+          a.currentPath != b.currentPath,
       builder: (context, storageState) {
         return BlocBuilder<StorageFilterCubit, StorageFilter>(
           builder: (context, filterState) {
             final filterCubit = context.read<StorageFilterCubit>();
-            final filteredItems = filterCubit.applyFilter(storageState.summary.files);
-            final totalBytesFiltered = filteredItems.fold<int>(0, (sum, i) => sum + i.size);
-            final selectedItems = filteredItems.where((i) => _selectedItemPaths.contains(i.path)).toList();
-            final selectedBytes = selectedItems.fold<int>(0, (sum, i) => sum + i.size);
+            final (filteredItems, totalBytesFiltered) = _filtered(
+              filterCubit,
+              filterState,
+              storageState.summary.files,
+            );
+            final selectedItems = _selectedItemPaths.isEmpty
+                ? const <StorageItem>[]
+                : filteredItems
+                      .where((i) => _selectedItemPaths.contains(i.path))
+                      .toList();
+            final selectedBytes = selectedItems.fold<int>(
+              0,
+              (sum, i) => sum + i.size,
+            );
 
             return Scaffold(
               backgroundColor: Colors.transparent,
@@ -83,14 +124,31 @@ class _ClassifierViewState extends State<ClassifierView> {
                           flex: 3,
                           child: TextField(
                             controller: _searchController,
-                            onChanged: (val) => filterCubit.setSearchQuery(val),
+                            // Debounced: each search scans every path, so don't run it per keystroke
+                            onChanged: (val) {
+                              _searchDebounce?.cancel();
+                              _searchDebounce = Timer(
+                                const Duration(milliseconds: 300),
+                                () => filterCubit.setSearchQuery(val),
+                              );
+                            },
                             decoration: InputDecoration(
                               hintText: 'Search files by name or extension (.mp4, cache, backup)...',
-                              hintStyle: TextStyle(color: AppColors.textMuted, fontSize: 13),
-                              prefixIcon: Icon(Icons.search_rounded, color: AppColors.textSecondary, size: 20),
+                              hintStyle: TextStyle(
+                                color: AppColors.textMuted,
+                                fontSize: 13,
+                              ),
+                              prefixIcon: Icon(
+                                Icons.search_rounded,
+                                color: AppColors.textSecondary,
+                                size: 20,
+                              ),
                               suffixIcon: _searchController.text.isNotEmpty
                                   ? IconButton(
-                                      icon: const Icon(Icons.close_rounded, size: 16),
+                                      icon: const Icon(
+                                        Icons.close_rounded,
+                                        size: 16,
+                                      ),
                                       onPressed: () {
                                         _searchController.clear();
                                         filterCubit.setSearchQuery('');
@@ -99,7 +157,10 @@ class _ClassifierViewState extends State<ClassifierView> {
                                   : null,
                               filled: true,
                               fillColor: AppColors.bgSidebar,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                                 borderSide: BorderSide(color: AppColors.border),
@@ -110,7 +171,10 @@ class _ClassifierViewState extends State<ClassifierView> {
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: AppColors.primary, width: 1.5),
+                                borderSide: BorderSide(
+                                  color: AppColors.primary,
+                                  width: 1.5,
+                                ),
                               ),
                             ),
                           ),
@@ -131,7 +195,14 @@ class _ClassifierViewState extends State<ClassifierView> {
                       scrollDirection: Axis.horizontal,
                       child: Row(
                         children: [
-                          _buildCategoryChip('All Types', null, Icons.apps_rounded, AppColors.primaryLight, filterState, filterCubit),
+                          _buildCategoryChip(
+                            'All Types',
+                            null,
+                            Icons.apps_rounded,
+                            AppColors.primaryLight,
+                            filterState,
+                            filterCubit,
+                          ),
                           Padding(
                             padding: const EdgeInsets.only(right: 8),
                             child: FilterChip(
@@ -140,25 +211,44 @@ class _ClassifierViewState extends State<ClassifierView> {
                               avatar: Icon(
                                 Icons.visibility_off_rounded,
                                 size: 16,
-                                color: filterState.showHiddenOnly ? AppColors.textPrimary : AppColors.catArchive,
+                                color: filterState.showHiddenOnly
+                                    ? AppColors.textPrimary
+                                    : AppColors.catArchive,
                               ),
                               label: const Text('👻 Hidden Files'),
                               labelStyle: TextStyle(
                                 fontSize: 12,
-                                fontWeight: filterState.showHiddenOnly ? FontWeight.w700 : FontWeight.w500,
-                                color: filterState.showHiddenOnly ? AppColors.textPrimary : AppColors.textSecondary,
+                                fontWeight: filterState.showHiddenOnly
+                                    ? FontWeight.w700
+                                    : FontWeight.w500,
+                                color: filterState.showHiddenOnly
+                                    ? AppColors.textPrimary
+                                    : AppColors.textSecondary,
                               ),
                               backgroundColor: AppColors.bgSidebar,
-                              selectedColor: AppColors.catArchive.withValues(alpha: 0.35),
+                              selectedColor: AppColors.catArchive.withValues(
+                                alpha: 0.35,
+                              ),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),
-                                side: BorderSide(color: filterState.showHiddenOnly ? AppColors.catArchive : AppColors.border),
+                                side: BorderSide(
+                                  color: filterState.showHiddenOnly
+                                      ? AppColors.catArchive
+                                      : AppColors.border,
+                                ),
                               ),
                               onSelected: (_) => filterCubit.toggleHiddenOnly(),
                             ),
                           ),
                           ...FileCategory.values.map(
-                            (cat) => _buildCategoryChip(cat.label, cat, cat.icon, cat.color, filterState, filterCubit),
+                            (cat) => _buildCategoryChip(
+                              cat.label,
+                              cat,
+                              cat.icon,
+                              cat.color,
+                              filterState,
+                              filterCubit,
+                            ),
                           ),
                         ],
                       ),
@@ -168,7 +258,10 @@ class _ClassifierViewState extends State<ClassifierView> {
 
                     // Summary & Batch Actions Bar
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
                       decoration: BoxDecoration(
                         color: AppColors.bgSidebar,
                         borderRadius: BorderRadius.circular(12),
@@ -177,38 +270,70 @@ class _ClassifierViewState extends State<ClassifierView> {
                       child: Row(
                         children: [
                           Checkbox(
-                            value: filteredItems.isNotEmpty && _selectedItemPaths.length == filteredItems.length,
-                            tristate: _selectedItemPaths.isNotEmpty && _selectedItemPaths.length < filteredItems.length,
+                            value:
+                                filteredItems.isNotEmpty &&
+                                _selectedItemPaths.length ==
+                                    filteredItems.length,
+                            tristate:
+                                _selectedItemPaths.isNotEmpty &&
+                                _selectedItemPaths.length <
+                                    filteredItems.length,
                             onChanged: (val) => _selectAll(filteredItems),
                             activeColor: AppColors.primary,
-                            side: BorderSide(color: AppColors.borderLight, width: 1.5),
+                            side: BorderSide(
+                              color: AppColors.borderLight,
+                              width: 1.5,
+                            ),
                           ),
                           const SizedBox(width: 8),
                           Text(
                             '${filteredItems.length} items',
-                            style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary,
+                            ),
                           ),
                           const SizedBox(width: 8),
                           Text(
                             '(${FileSizeFormatter.format(totalBytesFiltered)})',
-                            style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                            style: TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 13,
+                            ),
                           ),
                           const Spacer(),
                           if (_selectedItemPaths.isNotEmpty) ...[
                             Text(
                               'Selected: ${_selectedItemPaths.length} (${FileSizeFormatter.format(selectedBytes)})',
-                              style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.primaryLight),
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.primaryLight,
+                              ),
                             ),
                             const SizedBox(width: 14),
                             FilledButton.icon(
                               style: FilledButton.styleFrom(
                                 backgroundColor: AppColors.danger,
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 8,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
                               ),
                               onPressed: () => _deleteSelected(filteredItems),
-                              icon: const Icon(Icons.delete_sweep_rounded, size: 18),
-                              label: const Text('Delete Selected', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                              icon: const Icon(
+                                Icons.delete_sweep_rounded,
+                                size: 18,
+                              ),
+                              label: const Text(
+                                'Delete Selected',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 13,
+                                ),
+                              ),
                             ),
                           ],
                         ],
@@ -224,11 +349,19 @@ class _ClassifierViewState extends State<ClassifierView> {
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.filter_list_off_rounded, size: 48, color: AppColors.textMuted),
+                                  Icon(
+                                    Icons.filter_list_off_rounded,
+                                    size: 48,
+                                    color: AppColors.textMuted,
+                                  ),
                                   const SizedBox(height: 12),
                                   Text(
                                     'No files match your current filters',
-                                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.textSecondary,
+                                    ),
                                   ),
                                   const SizedBox(height: 4),
                                   TextButton(
@@ -236,7 +369,12 @@ class _ClassifierViewState extends State<ClassifierView> {
                                       filterCubit.resetFilters();
                                       _searchController.clear();
                                     },
-                                    child: Text('Reset All Filters', style: TextStyle(color: AppColors.primaryLight)),
+                                    child: Text(
+                                      'Reset All Filters',
+                                      style: TextStyle(
+                                        color: AppColors.primaryLight,
+                                      ),
+                                    ),
                                   ),
                                 ],
                               ),
@@ -245,7 +383,9 @@ class _ClassifierViewState extends State<ClassifierView> {
                               itemCount: filteredItems.length,
                               itemBuilder: (context, index) {
                                 final item = filteredItems[index];
-                                final isSelected = _selectedItemPaths.contains(item.path);
+                                final isSelected = _selectedItemPaths.contains(
+                                  item.path,
+                                );
 
                                 return FileListTile(
                                   item: item,
@@ -262,10 +402,16 @@ class _ClassifierViewState extends State<ClassifierView> {
                                   onDelete: () {
                                     showDialog(
                                       context: context,
-                                      builder: (dialogCtx) => DeleteConfirmationDialog(
-                                        items: [item],
-                                        onConfirm: () => context.read<StorageBloc>().add(DeleteSingleItemRequested(item)),
-                                      ),
+                                      builder: (dialogCtx) =>
+                                          DeleteConfirmationDialog(
+                                            items: [item],
+                                            onConfirm: () =>
+                                                context.read<StorageBloc>().add(
+                                                  DeleteSingleItemRequested(
+                                                    item,
+                                                  ),
+                                                ),
+                                          ),
                                     );
                                   },
                                 );
@@ -297,7 +443,11 @@ class _ClassifierViewState extends State<ClassifierView> {
       child: FilterChip(
         selected: isSelected,
         showCheckmark: false,
-        avatar: Icon(icon, size: 16, color: isSelected ? AppColors.textPrimary : color),
+        avatar: Icon(
+          icon,
+          size: 16,
+          color: isSelected ? AppColors.textPrimary : color,
+        ),
         label: Text(label),
         labelStyle: TextStyle(
           fontSize: 12,
@@ -315,7 +465,10 @@ class _ClassifierViewState extends State<ClassifierView> {
     );
   }
 
-  Widget _buildSizeFilterDropdown(StorageFilter filterState, StorageFilterCubit cubit) {
+  Widget _buildSizeFilterDropdown(
+    StorageFilter filterState,
+    StorageFilterCubit cubit,
+  ) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
@@ -327,8 +480,15 @@ class _ClassifierViewState extends State<ClassifierView> {
         child: DropdownButton<int>(
           value: filterState.minSizeBytes,
           dropdownColor: AppColors.bgSidebar,
-          icon: Icon(Icons.arrow_drop_down_rounded, color: AppColors.textSecondary),
-          style: TextStyle(fontSize: 12, color: AppColors.textPrimary, fontWeight: FontWeight.w500),
+          icon: Icon(
+            Icons.arrow_drop_down_rounded,
+            color: AppColors.textSecondary,
+          ),
+          style: TextStyle(
+            fontSize: 12,
+            color: AppColors.textPrimary,
+            fontWeight: FontWeight.w500,
+          ),
           items: const [
             DropdownMenuItem(value: 0, child: Text('Size: Any')),
             DropdownMenuItem(value: 10 * 1024 * 1024, child: Text('> 10 MB')),
@@ -345,7 +505,10 @@ class _ClassifierViewState extends State<ClassifierView> {
     );
   }
 
-  Widget _buildAgeFilterDropdown(StorageFilter filterState, StorageFilterCubit cubit) {
+  Widget _buildAgeFilterDropdown(
+    StorageFilter filterState,
+    StorageFilterCubit cubit,
+  ) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
@@ -357,8 +520,15 @@ class _ClassifierViewState extends State<ClassifierView> {
         child: DropdownButton<int?>(
           value: filterState.minAgeDays,
           dropdownColor: AppColors.bgSidebar,
-          icon: Icon(Icons.arrow_drop_down_rounded, color: AppColors.textSecondary),
-          style: TextStyle(fontSize: 12, color: AppColors.textPrimary, fontWeight: FontWeight.w500),
+          icon: Icon(
+            Icons.arrow_drop_down_rounded,
+            color: AppColors.textSecondary,
+          ),
+          style: TextStyle(
+            fontSize: 12,
+            color: AppColors.textPrimary,
+            fontWeight: FontWeight.w500,
+          ),
           items: const [
             DropdownMenuItem(value: null, child: Text('Age: Any Time')),
             DropdownMenuItem(value: 30, child: Text('> 30 days old')),
@@ -372,7 +542,10 @@ class _ClassifierViewState extends State<ClassifierView> {
     );
   }
 
-  Widget _buildSortDropdown(StorageFilter filterState, StorageFilterCubit cubit) {
+  Widget _buildSortDropdown(
+    StorageFilter filterState,
+    StorageFilterCubit cubit,
+  ) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
@@ -384,8 +557,15 @@ class _ClassifierViewState extends State<ClassifierView> {
         child: DropdownButton<SortOption>(
           value: filterState.sortOption,
           dropdownColor: AppColors.bgSidebar,
-          icon: Icon(Icons.arrow_drop_down_rounded, color: AppColors.textSecondary),
-          style: TextStyle(fontSize: 12, color: AppColors.textPrimary, fontWeight: FontWeight.w500),
+          icon: Icon(
+            Icons.arrow_drop_down_rounded,
+            color: AppColors.textSecondary,
+          ),
+          style: TextStyle(
+            fontSize: 12,
+            color: AppColors.textPrimary,
+            fontWeight: FontWeight.w500,
+          ),
           items: SortOption.values.map((opt) {
             return DropdownMenuItem(value: opt, child: Text(opt.label));
           }).toList(),
