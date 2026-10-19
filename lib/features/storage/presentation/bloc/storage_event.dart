@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 
+import '../../domain/entities/scan_progress.dart';
 import '../../domain/entities/storage_item.dart';
 import '../../domain/entities/storage_summary.dart';
 
@@ -16,10 +17,11 @@ class LoadCommonLocationsRequested extends StorageEvent {
 
 class StartScanRequested extends StorageEvent {
   final String path;
-  const StartScanRequested(this.path);
+  final bool force;
+  const StartScanRequested(this.path, {this.force = false});
 
   @override
-  List<Object?> get props => [path];
+  List<Object?> get props => [path, force];
 }
 
 class PickAndScanCustomFolderRequested extends StorageEvent {
@@ -27,27 +29,30 @@ class PickAndScanCustomFolderRequested extends StorageEvent {
 }
 
 class ScanProgressUpdated extends StorageEvent {
-  final String currentPath;
-  const ScanProgressUpdated(this.currentPath);
+  final ScanProgress progress;
+  final String? targetPath;
+  const ScanProgressUpdated(this.progress, {this.targetPath});
 
   @override
-  List<Object?> get props => [currentPath];
+  List<Object?> get props => [progress, targetPath];
 }
 
 class ScanCompletedEvent extends StorageEvent {
   final StorageSummary summary;
-  const ScanCompletedEvent(this.summary);
+  final String path;
+  const ScanCompletedEvent(this.summary, {this.path = ''});
 
   @override
-  List<Object?> get props => [summary];
+  List<Object?> get props => [summary, path];
 }
 
 class ScanFailedEvent extends StorageEvent {
   final String message;
-  const ScanFailedEvent(this.message);
+  final String path;
+  const ScanFailedEvent(this.message, {this.path = ''});
 
   @override
-  List<Object?> get props => [message];
+  List<Object?> get props => [message, path];
 }
 
 class CancelScanRequested extends StorageEvent {
@@ -68,6 +73,16 @@ class DeleteMultipleItemsRequested extends StorageEvent {
 
   @override
   List<Object?> get props => [items];
+}
+
+/// Deletes only selected duplicates whose bytes match a copy that stays.
+class DeleteVerifiedDuplicatesRequested extends StorageEvent {
+  final List<List<StorageItem>> groups;
+  final Set<String> selectedPaths;
+  const DeleteVerifiedDuplicatesRequested(this.groups, this.selectedPaths);
+
+  @override
+  List<Object?> get props => [groups, selectedPaths];
 }
 
 class DeleteEmptyDirectoriesRequested extends StorageEvent {

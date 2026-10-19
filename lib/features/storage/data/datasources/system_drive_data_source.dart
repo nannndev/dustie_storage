@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
@@ -19,31 +20,13 @@ class SystemDriveDataSourceImpl implements SystemDriveDataSource {
         Platform.environment['USERPROFILE'] ??
         '';
 
-    // 1. Entire Storage / Root Drive (Macintosh HD, C:\, /)
+    // 1. Entire Storage / All Available Drives (Windows C:, D:, etc., macOS Volumes, Linux mounts)
     if (Platform.isMacOS) {
-      locations.add(
-        const SystemDriveLocation(
-          name: 'Entire Disk (Mac HD)',
-          path: '/',
-          iconName: 'hard_drive',
-        ),
-      );
+      locations.addAll(await _getMacDrives());
     } else if (Platform.isWindows) {
-      locations.add(
-        const SystemDriveLocation(
-          name: 'Entire Disk (C:)',
-          path: 'C:\\',
-          iconName: 'hard_drive',
-        ),
-      );
+      locations.addAll(await _getWindowsDrives());
     } else if (Platform.isLinux) {
-      locations.add(
-        const SystemDriveLocation(
-          name: 'Root Storage (/)',
-          path: '/',
-          iconName: 'hard_drive',
-        ),
-      );
+      locations.addAll(await _getLinuxDrives(home));
     }
 
     // 2. System Caches & Application Data (Hidden gigabytes hide here!)
@@ -142,21 +125,188 @@ class SystemDriveDataSourceImpl implements SystemDriveDataSource {
       }
     }
 
-    // 7. External Volumes / Drives
-    if (Platform.isMacOS) {
-      final volumes = Directory('/Volumes');
-      if (await volumes.exists()) {
-        locations.add(
-          const SystemDriveLocation(
-            name: 'Volumes & USBs',
-            path: '/Volumes',
-            iconName: 'storage',
-          ),
-        );
+    return locations;
+  }
+
+  Future<List<SystemDriveLocation>> _getWindowsDrives() async {
+    final Map<String, String> volumeNames = {};
+    final Map<String, int> driveTypes = {};
+
+    if (!Platform.environment.containsKey('FLUTTER_TEST')) {
+      try {
+        final result = await Process.run('powershell', [
+          '-NoProfile',
+          '-NonInteractive',
+          '-Command',
+          'Get-CimInstance Win32_LogicalDisk | Select-Object -Property DeviceID, VolumeName, DriveType | ConvertTo-Json',
+        ]).timeout(const Duration(milliseconds: 1500));
+
+        if (result.exitCode == 0 && result.stdout != null) {
+          final raw = result.stdout.toString().trim();
+          if (raw.isNotEmpty) {
+            final decoded = jsonDecode(raw);
+            final items = decoded is List ? decoded : [decoded];
+            for (final item in items) {
+              if (item is Map) {
+                final id = item['DeviceID']?.toString().toUpperCase();
+                final vol = item['VolumeName']?.toString().trim();
+                final type =
+                    int.tryParse(item['DriveType']?.toString() ?? '') ?? 3;
+                if (id != null && id.isNotEmpty) {
+                  final letter = id.replaceAll(':', '');
+                  if (vol != null && vol.isNotEmpty) {
+                    volumeNames[letter] = vol;
+                  }
+                  driveTypes[letter] = type;
+                }
+              }
+            }
+          }
+        }
+      } catch (_) {
+        // In case PowerShell is restricted or times out, proceed to letter checks
       }
     }
 
-    return locations;
+    return _scanDriveLetters(volumeNames, driveTypes);
+  }
+
+  List<SystemDriveLocation> _scanDriveLetters(
+    Map<String, String> volumeNames,
+    Map<String, int> driveTypes,
+  ) {
+    final List<SystemDriveLocation> drives = [];
+
+    // Check drives A..Z
+    for (int code = 65; code <= 90; code++) {
+      final letter = String.fromCharCode(code);
+      final drivePath = '$letter:\\';
+      try {
+        final dir = Directory(drivePath);
+        if (dir.existsSync()) {
+          final volName = volumeNames[letter];
+          final type = driveTypes[letter] ?? 3;
+
+          final String displayName;
+          if (volName != null && volName.isNotEmpty) {
+            displayName = '$volName ($letter:)';
+          } else if (letter == 'C') {
+            displayName = 'Entire Disk (C:)';
+          } else {
+            displayName = 'Local Disk ($letter:)';
+          }
+
+          // DriveType: 2 = Removable (USB), 4 = Network, 3 = Fixed HDD/SSD
+          final String icon;
+          if (type == 2) {
+            icon = 'storage';
+          } else if (type == 4) {
+            icon = 'cloud';
+          } else {
+            icon = 'hard_drive';
+          }
+
+          drives.add(
+            SystemDriveLocation(
+              name: displayName,
+              path: drivePath,
+              iconName: icon,
+            ),
+          );
+        }
+      } catch (_) {
+        // Skip inaccessible drives (e.g. empty CD drive)
+      }
+    }
+
+    if (drives.isEmpty) {
+      drives.add(
+        const SystemDriveLocation(
+          name: 'Entire Disk (C:)',
+          path: 'C:\\',
+          iconName: 'hard_drive',
+        ),
+      );
+    }
+
+    return drives;
+  }
+
+  Future<List<SystemDriveLocation>> _getMacDrives() async {
+    final List<SystemDriveLocation> drives = [
+      const SystemDriveLocation(
+        name: 'Entire Disk (Mac HD)',
+        path: '/',
+        iconName: 'hard_drive',
+      ),
+    ];
+
+    try {
+      final volumes = Directory('/Volumes');
+      if (await volumes.exists()) {
+        await for (final entity in volumes.list(followLinks: false)) {
+          if (entity is Directory) {
+            final name = entity.uri.pathSegments
+                .where((s) => s.isNotEmpty)
+                .last;
+            if (name != 'Macintosh HD') {
+              drives.add(
+                SystemDriveLocation(
+                  name: 'Disk ($name)',
+                  path: entity.path,
+                  iconName: 'storage',
+                ),
+              );
+            }
+          }
+        }
+      }
+    } catch (_) {}
+
+    return drives;
+  }
+
+  Future<List<SystemDriveLocation>> _getLinuxDrives(String home) async {
+    final List<SystemDriveLocation> drives = [
+      const SystemDriveLocation(
+        name: 'Root Storage (/)',
+        path: '/',
+        iconName: 'hard_drive',
+      ),
+    ];
+
+    final username = Platform.environment['USER'] ?? '';
+    final mountDirs = [
+      Directory('/media'),
+      Directory('/mnt'),
+      if (username.isNotEmpty) Directory('/media/$username'),
+      if (username.isNotEmpty) Directory('/run/media/$username'),
+    ];
+
+    for (final mDir in mountDirs) {
+      try {
+        if (await mDir.exists()) {
+          await for (final entity in mDir.list(followLinks: false)) {
+            if (entity is Directory) {
+              final name = entity.uri.pathSegments
+                  .where((s) => s.isNotEmpty)
+                  .last;
+              if (name.isNotEmpty && !name.startsWith('.')) {
+                drives.add(
+                  SystemDriveLocation(
+                    name: 'Disk ($name)',
+                    path: entity.path,
+                    iconName: 'storage',
+                  ),
+                );
+              }
+            }
+          }
+        }
+      } catch (_) {}
+    }
+
+    return drives;
   }
 
   @override

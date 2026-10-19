@@ -35,9 +35,17 @@ class BentoNode extends Equatable {
     List<StorageItem> items, {
     int depth = 2,
   }) {
+    final segments = rootPath
+        .split(RegExp(r'[/\\]'))
+        .where((s) => s.isNotEmpty)
+        .toList();
+    final rootName = rootPath.isEmpty
+        ? 'Root'
+        : (segments.isEmpty ? rootPath : segments.last);
+
     if (items.isEmpty) {
       return BentoNode(
-        name: rootPath.isEmpty ? 'Root' : rootPath.split('/').last,
+        name: rootName,
         path: rootPath,
         size: 0,
         isDirectory: true,
@@ -45,25 +53,39 @@ class BentoNode extends Equatable {
       );
     }
 
+    final useBackslash =
+        rootPath.contains('\\') ||
+        (!rootPath.contains('/') &&
+            items.isNotEmpty &&
+            items.first.path.contains('\\'));
+    final sep = useBackslash ? '\\' : '/';
+    final cleanRoot = useBackslash
+        ? rootPath.replaceAll('/', '\\')
+        : rootPath.replaceAll('\\', '/');
+    final normalizedRoot = (cleanRoot.endsWith('/') || cleanRoot.endsWith('\\'))
+        ? cleanRoot
+        : '$cleanRoot$sep';
+
     // Map direct children under current rootPath
     final Map<String, List<StorageItem>> directChildrenItems = {};
     final List<StorageItem> directFiles = [];
 
-    final normalizedRoot = rootPath.endsWith('/') ? rootPath : '$rootPath/';
-
     for (final item in items) {
-      if (!item.path.startsWith(normalizedRoot) && item.path != rootPath) {
+      final itemPath = useBackslash
+          ? item.path.replaceAll('/', '\\')
+          : item.path.replaceAll('\\', '/');
+
+      if (!itemPath.startsWith(normalizedRoot) && itemPath != cleanRoot) {
         continue;
       }
 
-      // indexOf instead of split: avoids allocating every path segment for a million files
-      final slash = item.path.indexOf('/', normalizedRoot.length);
+      final slash = itemPath.indexOf(sep, normalizedRoot.length);
       if (slash < 0) {
         // Direct file under this folder
         directFiles.add(item);
       } else {
         // Belongs to a subfolder
-        final subfolderName = item.path.substring(normalizedRoot.length, slash);
+        final subfolderName = itemPath.substring(normalizedRoot.length, slash);
         directChildrenItems.putIfAbsent(subfolderName, () => []).add(item);
       }
     }
@@ -114,9 +136,6 @@ class BentoNode extends Equatable {
     children.sort((a, b) => b.size.compareTo(a.size));
 
     final totalSize = items.fold<int>(0, (s, i) => s + i.size);
-    final rootName = rootPath.isEmpty
-        ? 'Root'
-        : rootPath.split('/').where((s) => s.isNotEmpty).last;
 
     return BentoNode(
       name: rootName,

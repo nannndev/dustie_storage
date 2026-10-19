@@ -151,8 +151,9 @@ class _DuplicatesViewState extends State<DuplicatesView> {
                                           items: selectedItems,
                                           onConfirm: () {
                                             context.read<StorageBloc>().add(
-                                              DeleteMultipleItemsRequested(
-                                                selectedItems,
+                                              DeleteVerifiedDuplicatesRequested(
+                                                groups.values.toList(),
+                                                Set.of(_selectedDuplicatePaths),
                                               ),
                                             );
                                             setState(

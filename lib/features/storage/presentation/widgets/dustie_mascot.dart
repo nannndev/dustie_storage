@@ -105,15 +105,15 @@ class _DustiePainter extends CustomPainter {
       ).createShader(Rect.fromCircle(center: center, radius: radius * 1.35));
     canvas.drawCircle(center, radius * 1.35, glowPaint);
 
-    // Body (Fluffy Dust Ball)
+    // Body (Fluffy Matte Blue Dust Ball)
     final bodyPaint = Paint()
       ..shader = LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [
-          const Color(0xFFDDFB8A),
-          const Color(0xFFB8F03C),
-          const Color(0xFF7FB20F),
+          const Color(0xFF93C5FD), // soft sky blue highlight
+          const Color(0xFF3B82F6), // bright matte blue body
+          const Color(0xFF1D4ED8), // deep cobalt shadow
         ],
       ).createShader(Rect.fromCircle(center: center, radius: radius));
 
@@ -135,7 +135,7 @@ class _DustiePainter extends CustomPainter {
 
     // Eyes
     final eyePaint = Paint()..color = Colors.white;
-    final pupilPaint = Paint()..color = const Color(0xFF101400);
+    final pupilPaint = Paint()..color = const Color(0xFF0F172A);
     final sparkPaint = Paint()..color = Colors.white;
 
     final leftEyeCenter = Offset(
@@ -150,7 +150,7 @@ class _DustiePainter extends CustomPainter {
 
     if (mood == DustieMood.sleeping) {
       final arcPaint = Paint()
-        ..color = const Color(0xFF101400)
+        ..color = const Color(0xFF0F172A)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 3
         ..strokeCap = StrokeCap.round;
@@ -201,7 +201,7 @@ class _DustiePainter extends CustomPainter {
 
     // Mouth
     final mouthPaint = Paint()
-      ..color = const Color(0xFF101400)
+      ..color = const Color(0xFF0F172A)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.5
       ..strokeCap = StrokeCap.round;

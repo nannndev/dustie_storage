@@ -23,9 +23,17 @@ class BentoBoardView extends StatefulWidget {
 class _BentoBoardViewState extends State<BentoBoardView> {
   int _boardModeIndex = 0; // 0: Nested Bento Treemap, 1: Size Tiers
   final List<BentoNode> _navigationStack = [];
+  bool _isDrillingDeeper = true;
+  final ScrollController _breadcrumbScrollCtrl = ScrollController();
 
   // Memo: hover/mode-switch setState must not rebuild a tree over a million files
   (String, List<StorageItem>, BentoNode)? _treeCache;
+
+  @override
+  void dispose() {
+    _breadcrumbScrollCtrl.dispose();
+    super.dispose();
+  }
 
   BentoNode _treeFor(String path, List<StorageItem> files) {
     final c = _treeCache;
@@ -38,23 +46,49 @@ class _BentoBoardViewState extends State<BentoBoardView> {
   void _drillDown(BentoNode node) {
     if (node.isDirectory) {
       setState(() {
+        _isDrillingDeeper = true;
         _navigationStack.add(node);
       });
+      _scrollToDeepestBreadcrumb();
     }
   }
 
   void _navigateBack() {
     if (_navigationStack.isNotEmpty) {
       setState(() {
+        _isDrillingDeeper = false;
         _navigationStack.removeLast();
       });
+      _scrollToDeepestBreadcrumb();
     }
   }
 
   void _navigateToIndex(int index) {
     setState(() {
+      _isDrillingDeeper = false;
       while (_navigationStack.length > index + 1) {
         _navigationStack.removeLast();
+      }
+    });
+    _scrollToDeepestBreadcrumb();
+  }
+
+  void _navigateToRoot() {
+    setState(() {
+      _isDrillingDeeper = false;
+      _navigationStack.clear();
+    });
+    _scrollToDeepestBreadcrumb();
+  }
+
+  void _scrollToDeepestBreadcrumb() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_breadcrumbScrollCtrl.hasClients) {
+        _breadcrumbScrollCtrl.animateTo(
+          _breadcrumbScrollCtrl.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOutCubic,
+        );
       }
     });
   }
@@ -79,6 +113,8 @@ class _BentoBoardViewState extends State<BentoBoardView> {
 
         final speechText = state.isScanning
             ? 'Sedang mengendus file di drive kamu... 🔍'
+            : _navigationStack.isNotEmpty
+            ? 'Menyelam ke folder "${currentNode.name}" (${currentNode.children.length} item • ${currentNode.formattedSize})! 🤿✨'
             : largestItem != null
             ? 'Nyam! File paling raksasa di sini adalah "${largestItem.name}" (${largestItem.formattedSize})!'
             : 'Pilih folder atau drive untuk mulai visualisasi!';
@@ -146,54 +182,75 @@ class _BentoBoardViewState extends State<BentoBoardView> {
                     if (_boardModeIndex == 0) ...[
                       Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 8,
+                          horizontal: 10,
+                          vertical: 6,
                         ),
                         decoration: BoxDecoration(
                           color: AppColors.bgSidebar,
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(14),
                           border: Border.all(color: AppColors.border),
                         ),
                         child: Row(
                           children: [
-                            if (_navigationStack.isNotEmpty)
-                              IconButton(
-                                icon: Icon(
-                                  Icons.arrow_back_rounded,
-                                  size: 18,
-                                  color: AppColors.primaryLight,
-                                ),
-                                tooltip: 'Go Up One Level',
-                                onPressed: _navigateBack,
-                              ),
-                            Expanded(
-                              child: SingleChildScrollView(
-                                scrollDirection: Axis.horizontal,
-                                reverse:
-                                    true, // keep the deepest folder visible
-                                child: Row(
-                                  children: [
-                                    InkWell(
-                                      onTap: () => setState(
-                                        () => _navigationStack.clear(),
+                            if (_navigationStack.isNotEmpty) ...[
+                              Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: _navigateBack,
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 5,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primary.withValues(
+                                        alpha: 0.12,
                                       ),
-                                      child: Row(
-                                        children: [
-                                          Icon(
-                                            Icons.home_rounded,
-                                            size: 16,
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: AppColors.primary.withValues(
+                                          alpha: 0.35,
+                                        ),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.arrow_upward_rounded,
+                                          size: 14,
+                                          color: AppColors.primaryLight,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          'Up',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w700,
                                             color: AppColors.primaryLight,
                                           ),
-                                          SizedBox(width: 6),
-                                          Text(
-                                            'Root',
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.w700,
-                                              color: AppColors.textPrimary,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                            ],
+                            Expanded(
+                              child: SingleChildScrollView(
+                                controller: _breadcrumbScrollCtrl,
+                                scrollDirection: Axis.horizontal,
+                                child: Row(
+                                  children: [
+                                    _buildBreadcrumbPill(
+                                      label: 'Root',
+                                      icon: Icons.home_rounded,
+                                      isCurrent: _navigationStack.isEmpty,
+                                      onTap: _navigationStack.isEmpty
+                                          ? null
+                                          : _navigateToRoot,
                                     ),
                                     ..._navigationStack.asMap().entries.map((
                                       entry,
@@ -207,32 +264,27 @@ class _BentoBoardViewState extends State<BentoBoardView> {
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
                                           Padding(
-                                            padding: EdgeInsets.symmetric(
-                                              horizontal: 6,
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 4,
                                             ),
-                                            child: Text(
-                                              '/',
-                                              style: TextStyle(
-                                                color: AppColors.textMuted,
-                                                fontSize: 13,
-                                              ),
+                                            child: Icon(
+                                              Icons.chevron_right_rounded,
+                                              size: 16,
+                                              color: AppColors.textMuted,
                                             ),
                                           ),
-                                          InkWell(
+                                          _buildBreadcrumbPill(
+                                            label: node.name,
+                                            icon: Icons.folder_rounded,
+                                            isCurrent: isLast,
+                                            folderColor:
+                                                AppColors.getFolderColor(
+                                                  node.name,
+                                                  idx,
+                                                ),
                                             onTap: isLast
                                                 ? null
                                                 : () => _navigateToIndex(idx),
-                                            child: Text(
-                                              node.name,
-                                              style: TextStyle(
-                                                fontWeight: isLast
-                                                    ? FontWeight.w800
-                                                    : FontWeight.w600,
-                                                color: isLast
-                                                    ? AppColors.primaryLight
-                                                    : AppColors.textSecondary,
-                                              ),
-                                            ),
                                           ),
                                         ],
                                       );
@@ -242,12 +294,23 @@ class _BentoBoardViewState extends State<BentoBoardView> {
                               ),
                             ),
                             const SizedBox(width: 12),
-                            Text(
-                              '${currentNode.children.length} items • ${currentNode.formattedSize}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.textSecondary,
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.bgCard,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: AppColors.border),
+                              ),
+                              child: Text(
+                                '${currentNode.children.length} items • ${currentNode.formattedSize}',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.textSecondary,
+                                ),
                               ),
                             ),
                           ],
@@ -269,7 +332,9 @@ class _BentoBoardViewState extends State<BentoBoardView> {
                                   ),
                                   const SizedBox(height: 12),
                                   Text(
-                                    state.isScanning ? 'Menganalisis file...' : 'Scan folder untuk melihat Bento Board!',
+                                    state.isScanning
+                                        ? 'Menganalisis file...'
+                                        : 'Scan folder untuk melihat Bento Board!',
                                     style: TextStyle(
                                       fontSize: 15,
                                       fontWeight: FontWeight.w700,
@@ -280,11 +345,57 @@ class _BentoBoardViewState extends State<BentoBoardView> {
                               ),
                             )
                           : _boardModeIndex == 0
-                          ? BentoTreemapWidget(
-                              rootNode: currentNode,
-                              onNodeTapped: _drillDown,
-                              onDeleteNode: (node) =>
-                                  _confirmDelete(context, node, allFiles),
+                          ? AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 320),
+                              switchInCurve: Curves.easeOutCubic,
+                              switchOutCurve: Curves.easeInCubic,
+                              layoutBuilder: (currentChild, previousChildren) {
+                                return Stack(
+                                  fit: StackFit.expand,
+                                  children: [
+                                    ...previousChildren,
+                                    ?currentChild,
+                                  ],
+                                );
+                              },
+                              transitionBuilder: (child, animation) {
+                                final isIncoming =
+                                    (child.key as ValueKey<String>?)?.value ==
+                                    currentNode.path;
+                                final beginScale = _isDrillingDeeper
+                                    ? (isIncoming ? 0.90 : 1.10)
+                                    : (isIncoming ? 1.10 : 0.90);
+
+                                final scaleAnim =
+                                    Tween<double>(
+                                      begin: beginScale,
+                                      end: 1.0,
+                                    ).animate(
+                                      CurvedAnimation(
+                                        parent: animation,
+                                        curve: isIncoming
+                                            ? Curves.easeOutCubic
+                                            : Curves.easeInCubic,
+                                      ),
+                                    );
+
+                                return FadeTransition(
+                                  opacity: animation,
+                                  child: ScaleTransition(
+                                    scale: scaleAnim,
+                                    child: child,
+                                  ),
+                                );
+                              },
+                              child: KeyedSubtree(
+                                key: ValueKey(currentNode.path),
+                                child: BentoTreemapWidget(
+                                  rootNode: currentNode,
+                                  onNodeTapped: _drillDown,
+                                  onDeleteNode: (node) =>
+                                      _confirmDelete(context, node, allFiles),
+                                ),
+                              ),
                             )
                           : SizeTierBoardWidget(
                               allFiles: allFiles,
@@ -307,6 +418,57 @@ class _BentoBoardViewState extends State<BentoBoardView> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildBreadcrumbPill({
+    required String label,
+    required IconData icon,
+    required bool isCurrent,
+    Color? folderColor,
+    VoidCallback? onTap,
+  }) {
+    final activeColor = folderColor ?? AppColors.primary;
+    final textColor = isCurrent
+        ? (folderColor ?? AppColors.primaryLight)
+        : AppColors.textSecondary;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: isCurrent
+                ? activeColor.withValues(alpha: 0.16)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: isCurrent
+                  ? activeColor.withValues(alpha: 0.55)
+                  : Colors.transparent,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 14, color: textColor),
+              const SizedBox(width: 5),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: isCurrent ? FontWeight.w800 : FontWeight.w600,
+                  color: textColor,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 

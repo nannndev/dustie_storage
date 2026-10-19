@@ -1,5 +1,8 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+
+import '../../domain/entities/system_drive_location.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/theme_cubit.dart';
@@ -13,6 +16,7 @@ import 'bento_board_view.dart';
 import 'classifier_view.dart';
 import 'duplicates_view.dart';
 import 'overview_view.dart';
+import 'quick_clean_view.dart';
 import 'sweep_view.dart';
 
 class MainDashboardView extends StatelessWidget {
@@ -64,6 +68,7 @@ class MainDashboardView extends StatelessWidget {
                                 ClassifierView(),
                                 SweepView(),
                                 DuplicatesView(),
+                                QuickCleanView(),
                               ],
                             );
                           },
@@ -71,14 +76,14 @@ class MainDashboardView extends StatelessWidget {
                         BlocBuilder<StorageBloc, StorageState>(
                           buildWhen: (a, b) =>
                               a.isScanning != b.isScanning ||
-                              a.statusMessage != b.statusMessage,
+                              !identical(a.scanProgress, b.scanProgress),
                           builder: (context, state) {
                             return AnimatedSwitcher(
                               duration: const Duration(milliseconds: 300),
                               child: state.isScanning
                                   ? ScanningOverlay(
                                       key: const ValueKey('scanning'),
-                                      statusMessage: state.statusMessage,
+                                      progress: state.scanProgress,
                                       onCancel: () => context
                                           .read<StorageBloc>()
                                           .add(const CancelScanRequested()),
@@ -202,6 +207,14 @@ class MainDashboardView extends StatelessWidget {
                     icon: Icons.copy_rounded,
                     badge: storageState.summary.duplicateGroups.length,
                     onTap: () => nav.setTab(4),
+                  ),
+                  _buildNavItem(
+                    context,
+                    index: QuickCleanView.tabIndex,
+                    activeIndex: activeIndex,
+                    label: 'Quick Clean',
+                    icon: Icons.cleaning_services_rounded,
+                    onTap: () => nav.setTab(QuickCleanView.tabIndex),
                   ),
 
                   const Spacer(),
@@ -358,93 +371,17 @@ class MainDashboardView extends StatelessWidget {
           child: Row(
             children: [
               Expanded(
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      ...state.locations.map((loc) {
-                        final isCurrent = state.currentPath == loc.path;
-                        IconData iconData = Icons.folder_rounded;
-                        if (loc.name.contains('Entire') ||
-                            loc.name.contains('Root')) {
-                          iconData = Icons.dns_rounded;
-                        } else if (loc.name.contains('Caches') ||
-                            loc.name.contains('AppData')) {
-                          iconData = Icons.layers_rounded;
-                        } else if (loc.name.contains('Home')) {
-                          iconData = Icons.home_rounded;
-                        } else if (loc.name == 'Downloads') {
-                          iconData = Icons.download_rounded;
-                        } else if (loc.name == 'Documents') {
-                          iconData = Icons.folder_shared_rounded;
-                        } else if (loc.name == 'Desktop') {
-                          iconData = Icons.desktop_windows_rounded;
-                        } else if (loc.name.contains('Volumes')) {
-                          iconData = Icons.storage_rounded;
-                        }
-
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: ActionChip(
-                            avatar: Icon(
-                              iconData,
-                              size: 15,
-                              color: isCurrent
-                                  ? AppColors.onPrimary
-                                  : AppColors.primaryLight,
-                            ),
-                            label: Text(loc.name),
-                            labelStyle: TextStyle(
-                              fontSize: 12,
-                              fontWeight: isCurrent
-                                  ? FontWeight.w700
-                                  : FontWeight.w500,
-                              color: isCurrent
-                                  ? AppColors.onPrimary
-                                  : AppColors.textSecondary,
-                            ),
-                            backgroundColor: isCurrent
-                                ? AppColors.primary
-                                : AppColors.bgCard,
-                            side: BorderSide(
-                              color: isCurrent
-                                  ? AppColors.primary
-                                  : AppColors.border,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            onPressed: () => context.read<StorageBloc>().add(
-                              StartScanRequested(loc.path),
-                            ),
-                          ),
-                        );
-                      }),
-                      ActionChip(
-                        avatar: Icon(
-                          Icons.folder_open_rounded,
-                          size: 15,
-                          color: AppColors.textSecondary,
-                        ),
-                        label: const Text('Pick Folder...'),
-                        labelStyle: TextStyle(
-                          fontSize: 12,
-                          color: AppColors.textSecondary,
-                        ),
-                        backgroundColor: AppColors.bgCard,
-                        side: BorderSide(color: AppColors.border),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        onPressed: () => context.read<StorageBloc>().add(
-                          const PickAndScanCustomFolderRequested(),
-                        ),
-                      ),
-                    ],
+                child: _TopLocationsBar(
+                  locations: state.locations,
+                  currentPath: state.currentPath,
+                  scanningPaths: state.scanningPaths,
+                  onLocationSelected: (path) =>
+                      context.read<StorageBloc>().add(StartScanRequested(path)),
+                  onPickCustomFolder: () => context.read<StorageBloc>().add(
+                    const PickAndScanCustomFolderRequested(),
                   ),
                 ),
               ),
-
               const SizedBox(width: 14),
 
               // Light / Dark Mode Cartoon Toggle
@@ -527,7 +464,7 @@ class MainDashboardView extends StatelessWidget {
                     ),
                   ),
                   onPressed: () => context.read<StorageBloc>().add(
-                    StartScanRequested(state.currentPath),
+                    StartScanRequested(state.currentPath, force: true),
                   ),
                   icon: const Icon(Icons.refresh_rounded, size: 18),
                   label: const Text(
@@ -538,6 +475,345 @@ class MainDashboardView extends StatelessWidget {
               ],
             ],
           ),
+        );
+      },
+    );
+  }
+}
+
+class _TopLocationsBar extends StatefulWidget {
+  final List<SystemDriveLocation> locations;
+  final String currentPath;
+  final Set<String> scanningPaths;
+  final ValueChanged<String> onLocationSelected;
+  final VoidCallback onPickCustomFolder;
+
+  const _TopLocationsBar({
+    required this.locations,
+    required this.currentPath,
+    required this.scanningPaths,
+    required this.onLocationSelected,
+    required this.onPickCustomFolder,
+  });
+
+  @override
+  State<_TopLocationsBar> createState() => _TopLocationsBarState();
+}
+
+class _TopLocationsBarState extends State<_TopLocationsBar> {
+  final ScrollController _scrollController = ScrollController();
+  bool _canScrollLeft = false;
+  bool _canScrollRight = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_updateScrollButtons);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _updateScrollButtons();
+      _scrollToCurrentSelection();
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant _TopLocationsBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.locations.length != widget.locations.length ||
+        oldWidget.currentPath != widget.currentPath ||
+        oldWidget.scanningPaths.length != widget.scanningPaths.length) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _updateScrollButtons();
+        if (oldWidget.currentPath != widget.currentPath) {
+          _scrollToCurrentSelection();
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_updateScrollButtons);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _updateScrollButtons() {
+    if (!mounted || !_scrollController.hasClients) return;
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final currentScroll = _scrollController.offset;
+    final canLeft = currentScroll > 4;
+    final canRight = currentScroll < (maxScroll - 4);
+    if (canLeft != _canScrollLeft || canRight != _canScrollRight) {
+      setState(() {
+        _canScrollLeft = canLeft;
+        _canScrollRight = canRight;
+      });
+    }
+  }
+
+  void _scrollToCurrentSelection() {
+    if (!mounted || !_scrollController.hasClients) return;
+    final index = widget.locations.indexWhere(
+      (l) => l.path == widget.currentPath,
+    );
+    if (index >= 0) {
+      // Estimate ~140px per chip
+      final target = (index * 130.0 - 60.0).clamp(
+        0.0,
+        _scrollController.position.maxScrollExtent,
+      );
+      _scrollController.animateTo(
+        target,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOutCubic,
+      );
+    }
+  }
+
+  void _scrollBy(double offset) {
+    if (!_scrollController.hasClients) return;
+    final target = (_scrollController.offset + offset).clamp(
+      0.0,
+      _scrollController.position.maxScrollExtent,
+    );
+    _scrollController.animateTo(
+      target,
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  void _handlePointerSignal(PointerSignalEvent event) {
+    if (event is PointerScrollEvent && _scrollController.hasClients) {
+      final delta = event.scrollDelta.dy != 0
+          ? event.scrollDelta.dy
+          : event.scrollDelta.dx;
+      if (delta != 0) {
+        final target = (_scrollController.offset + delta).clamp(
+          0.0,
+          _scrollController.position.maxScrollExtent,
+        );
+        _scrollController.jumpTo(target);
+      }
+    }
+  }
+
+  IconData _iconFor(SystemDriveLocation loc) {
+    switch (loc.iconName) {
+      case 'hard_drive':
+        return Icons.dns_rounded;
+      case 'storage':
+        return Icons.storage_rounded;
+      case 'cloud':
+        return Icons.cloud_rounded;
+      case 'cached':
+        return Icons.layers_rounded;
+      case 'home':
+        return Icons.home_rounded;
+      case 'download':
+        return Icons.download_rounded;
+      case 'folder_shared':
+        return Icons.folder_shared_rounded;
+      case 'desktop_windows':
+        return Icons.desktop_windows_rounded;
+      default:
+        if (loc.name.contains('Disk') ||
+            loc.name.contains('Drive') ||
+            loc.name.contains('Volume')) {
+          return Icons.dns_rounded;
+        }
+        return Icons.folder_rounded;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        WidgetsBinding.instance.addPostFrameCallback(
+          (_) => _updateScrollButtons(),
+        );
+
+        return Stack(
+          alignment: Alignment.center,
+          children: [
+            ScrollConfiguration(
+              behavior: ScrollConfiguration.of(context).copyWith(
+                dragDevices: {
+                  PointerDeviceKind.touch,
+                  PointerDeviceKind.mouse,
+                  PointerDeviceKind.trackpad,
+                  PointerDeviceKind.stylus,
+                },
+              ),
+              child: Listener(
+                onPointerSignal: _handlePointerSignal,
+                child: SingleChildScrollView(
+                  controller: _scrollController,
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  padding: EdgeInsets.only(
+                    left: _canScrollLeft ? 38.0 : 0.0,
+                    right: _canScrollRight ? 38.0 : 0.0,
+                  ),
+                  child: Row(
+                    children: [
+                      ...widget.locations.map((loc) {
+                        final isCurrent = widget.currentPath == loc.path;
+                        final isScanningThis = widget.scanningPaths.contains(
+                          loc.path,
+                        );
+                        final iconData = _iconFor(loc);
+
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: Tooltip(
+                            message: isScanningThis
+                                ? '${loc.name} (Scanning in background...)\n${loc.path}'
+                                : '${loc.name}\n${loc.path}',
+                            waitDuration: const Duration(milliseconds: 400),
+                            child: ActionChip(
+                              avatar: isScanningThis
+                                  ? SizedBox(
+                                      width: 14,
+                                      height: 14,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: isCurrent
+                                            ? AppColors.onPrimary
+                                            : AppColors.primaryLight,
+                                      ),
+                                    )
+                                  : Icon(
+                                      iconData,
+                                      size: 15,
+                                      color: isCurrent
+                                          ? AppColors.onPrimary
+                                          : AppColors.primaryLight,
+                                    ),
+                              label: Text(loc.name),
+                              labelStyle: TextStyle(
+                                fontSize: 12,
+                                fontWeight: isCurrent
+                                    ? FontWeight.w700
+                                    : FontWeight.w500,
+                                color: isCurrent
+                                    ? AppColors.onPrimary
+                                    : AppColors.textSecondary,
+                              ),
+                              backgroundColor: isCurrent
+                                  ? AppColors.primary
+                                  : AppColors.bgCard,
+                              side: BorderSide(
+                                color: isCurrent
+                                    ? AppColors.primary
+                                    : AppColors.border,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              onPressed: () =>
+                                  widget.onLocationSelected(loc.path),
+                            ),
+                          ),
+                        );
+                      }),
+                      Tooltip(
+                        message:
+                            'Select any custom drive, external volume, or folder',
+                        child: ActionChip(
+                          avatar: Icon(
+                            Icons.folder_open_rounded,
+                            size: 15,
+                            color: AppColors.textSecondary,
+                          ),
+                          label: const Text('Pick Folder...'),
+                          labelStyle: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textSecondary,
+                          ),
+                          backgroundColor: AppColors.bgCard,
+                          side: BorderSide(color: AppColors.border),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          onPressed: widget.onPickCustomFolder,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            // Left scroll chevron button
+            if (_canScrollLeft)
+              Positioned(
+                left: 0,
+                child: Container(
+                  height: 40,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        AppColors.bgSidebar,
+                        AppColors.bgSidebar.withValues(alpha: 0.9),
+                        AppColors.bgSidebar.withValues(alpha: 0.0),
+                      ],
+                      stops: const [0.0, 0.75, 1.0],
+                    ),
+                  ),
+                  padding: const EdgeInsets.only(right: 14),
+                  alignment: Alignment.centerLeft,
+                  child: IconButton(
+                    icon: const Icon(Icons.chevron_left_rounded, size: 20),
+                    style: IconButton.styleFrom(
+                      backgroundColor: AppColors.bgCard,
+                      foregroundColor: AppColors.textPrimary,
+                      padding: EdgeInsets.zero,
+                      minimumSize: const Size(28, 28),
+                      side: BorderSide(color: AppColors.border),
+                    ),
+                    tooltip: 'Scroll left',
+                    onPressed: () => _scrollBy(-220),
+                  ),
+                ),
+              ),
+
+            // Right scroll chevron button
+            if (_canScrollRight)
+              Positioned(
+                right: 0,
+                child: Container(
+                  height: 40,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        AppColors.bgSidebar.withValues(alpha: 0.0),
+                        AppColors.bgSidebar.withValues(alpha: 0.9),
+                        AppColors.bgSidebar,
+                      ],
+                      stops: const [0.0, 0.25, 1.0],
+                    ),
+                  ),
+                  padding: const EdgeInsets.only(left: 14),
+                  alignment: Alignment.centerRight,
+                  child: IconButton(
+                    icon: const Icon(Icons.chevron_right_rounded, size: 20),
+                    style: IconButton.styleFrom(
+                      backgroundColor: AppColors.bgCard,
+                      foregroundColor: AppColors.textPrimary,
+                      padding: EdgeInsets.zero,
+                      minimumSize: const Size(28, 28),
+                      side: BorderSide(color: AppColors.border),
+                    ),
+                    tooltip: 'Scroll right',
+                    onPressed: () => _scrollBy(220),
+                  ),
+                ),
+              ),
+          ],
         );
       },
     );

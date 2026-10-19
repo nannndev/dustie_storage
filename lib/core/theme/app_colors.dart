@@ -18,14 +18,41 @@ class AppColors {
   static Color get borderLight =>
       isDark ? const Color(0xFF34343A) : const Color(0xFFCFCFC6);
 
-  // Primary: Dustie Lime
-  static const Color primary = Color(0xFFB8F03C);
-  // Accent text/icon tint: bright lime is unreadable on white, so use deep olive-lime in light mode
+  // Primary: Bright Matte Blue ("Biru Doff Cerah")
+  static const Color primary = Color(0xFF3B82F6);
+  // Accent text/icon tint: clear matte azure in dark mode, rich cobalt in light mode
   static Color get primaryLight =>
-      isDark ? const Color(0xFFCCF56E) : const Color(0xFF4F7A00);
-  static const Color primaryDark = Color(0xFF4F7A00);
-  // Text/icons drawn ON a solid primary fill (lime is light, so this is near-black)
-  static const Color onPrimary = Color(0xFF101400);
+      isDark ? const Color(0xFF60A5FA) : const Color(0xFF2563EB);
+  static const Color primaryDark = Color(0xFF1D4ED8);
+  // Text/icons drawn ON a solid primary fill (white for crisp contrast)
+  static const Color onPrimary = Colors.white;
+
+  // Curated matte vibrant folder palette (for colorful, non-monotonous Bento tiles)
+  static const List<Color> folderPalette = [
+    Color(0xFF3B82F6), // Matte Bright Azure Blue
+    Color(0xFF8B5CF6), // Matte Iris Purple
+    Color(0xFF10B981), // Matte Mint Emerald
+    Color(0xFFF59E0B), // Matte Golden Amber
+    Color(0xFFEC4899), // Matte Rose Pink
+    Color(0xFF06B6D4), // Matte Electric Cyan
+    Color(0xFFF97316), // Matte Tangerine Orange
+    Color(0xFF6366F1), // Matte Indigo
+    Color(0xFF14B8A6), // Matte Jade Teal
+    Color(0xFFA855F7), // Matte Violet
+    Color(0xFFE11D48), // Matte Coral Crimson
+    Color(0xFF84CC16), // Matte Lime
+  ];
+
+  /// Returns a deterministic, beautiful matte color for folder tiles.
+  static Color getFolderColor(String name, [int index = 0]) {
+    if (name.isEmpty) return folderPalette[0];
+    int hash = 0;
+    for (int i = 0; i < name.length; i++) {
+      hash = (hash * 31 + name.codeUnitAt(i)) & 0x7FFFFFFF;
+    }
+    final idx = (hash + index * 5) % folderPalette.length;
+    return folderPalette[idx];
+  }
 
   // Vibrant Distinct Category Palette (Zero Ambiguity & High Contrast)
   static const Color catInstaller = Color(
@@ -41,8 +68,8 @@ class AppColors {
     0xFF06B6D4,
   ); // 🎵 Electric Turquoise / Cyan (188° Hue)
   static const Color catDocument = Color(
-    0xFF3B82F6,
-  ); // 📄 Royal Azure Sky Blue (217° Hue)
+    0xFF0284C7,
+  ); // 📄 Vibrant Sky Blue (200° Hue)
   static const Color catArchive = Color(
     0xFF8B5CF6,
   ); // 📦 Deep Royal Violet (258° Hue)
@@ -80,5 +107,5 @@ class AppColors {
   static Color get textMuted =>
       isDark ? const Color(0xFF6B6B72) : const Color(0xFF8C8C93);
   static Color get speechBubbleBg =>
-      isDark ? const Color(0xFF18181A) : const Color(0xFFF1F7E2);
+      isDark ? const Color(0xFF18181A) : const Color(0xFFEFF6FF);
 }

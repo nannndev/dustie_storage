@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:dustie_storage/features/storage/data/datasources/local_file_system_data_source.dart';
 import 'package:dustie_storage/features/storage/domain/entities/storage_summary.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path/path.dart' as p;
 
 void main() {
   test(
@@ -28,7 +29,7 @@ void main() {
 
       expect(summary.files.map((f) => f.name).toSet(), {'a.txt', 'b.bin'});
       expect(summary.totalSize, 105);
-      expect(summary.emptyFolders, ['${root.path}/empty']);
+      expect(summary.emptyFolders, [p.join(root.path, 'empty')]);
     },
   );
 }

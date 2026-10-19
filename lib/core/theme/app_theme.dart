@@ -16,7 +16,7 @@ class AppTheme {
       colorScheme: const ColorScheme.dark(
         primary: AppColors.primary,
         onPrimary: AppColors.onPrimary,
-        secondary: Color(0xFFCCF56E),
+        secondary: Color(0xFF60A5FA),
         surface: Color(0xFF111112),
         error: AppColors.danger,
       ),
@@ -50,9 +50,9 @@ class AppTheme {
       scaffoldBackgroundColor: const Color(0xFFF6F6F2),
       textTheme: textTheme,
       colorScheme: const ColorScheme.light(
-        primary: AppColors.primaryDark,
-        onPrimary: Colors.white,
-        secondary: AppColors.primaryDark,
+        primary: AppColors.primary,
+        onPrimary: AppColors.onPrimary,
+        secondary: Color(0xFF2563EB),
         surface: Colors.white,
         error: AppColors.danger,
       ),

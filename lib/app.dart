@@ -5,12 +5,14 @@ import 'core/theme/app_colors.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_cubit.dart';
 import 'features/navigation/presentation/cubit/navigation_cubit.dart';
+import 'features/storage/data/datasources/junk_location_data_source.dart';
 import 'features/storage/data/datasources/local_file_system_data_source.dart';
 import 'features/storage/data/datasources/system_drive_data_source.dart';
 import 'features/storage/data/repositories/storage_repository_impl.dart';
 import 'features/storage/domain/repositories/storage_repository.dart';
 import 'features/storage/presentation/bloc/storage_bloc.dart';
 import 'features/storage/presentation/bloc/storage_event.dart';
+import 'features/storage/presentation/cubit/quick_clean_cubit.dart';
 import 'features/storage/presentation/cubit/storage_filter_cubit.dart';
 import 'features/storage/presentation/views/main_dashboard_view.dart';
 
@@ -34,6 +36,10 @@ class DustieStorageApp extends StatelessWidget {
           BlocProvider<NavigationCubit>(create: (context) => NavigationCubit()),
           BlocProvider<StorageFilterCubit>(
             create: (context) => StorageFilterCubit(),
+          ),
+          BlocProvider<QuickCleanCubit>(
+            create: (context) =>
+                QuickCleanCubit(dataSource: JunkLocationDataSourceImpl()),
           ),
           BlocProvider<StorageBloc>(
             create: (context) =>

@@ -10,4 +10,10 @@ class FileSizeFormatter {
     }
     return '${dBytes.toStringAsFixed(decimals)} ${suffixes[i]}';
   }
+
+  /// 142381 → "142,381"
+  static String formatCount(int count) => count.toString().replaceAllMapped(
+    RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+    (m) => '${m[1]},',
+  );
 }

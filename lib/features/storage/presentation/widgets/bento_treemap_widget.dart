@@ -57,10 +57,12 @@ class BentoTreemapWidget extends StatelessWidget {
         );
 
         return Stack(
-          children: rects.map((entry) {
-            final rect = entry.rect.deflate(_gap);
+          children: rects.asMap().entries.map((entry) {
+            final index = entry.key;
+            final item = entry.value;
+            final rect = item.rect.deflate(_gap);
             return AnimatedPositioned(
-              key: ValueKey(entry.node.path),
+              key: ValueKey(item.node.path),
               duration: const Duration(milliseconds: 280),
               curve: Curves.easeOutCubic,
               left: rect.left,
@@ -68,12 +70,13 @@ class BentoTreemapWidget extends StatelessWidget {
               width: rect.width.clamp(0.0, double.infinity),
               height: rect.height.clamp(0.0, double.infinity),
               child: _BentoTile(
-                node: entry.node,
-                ratio: entry.node.size / totalAreaSize * 100,
-                onOpen: () => _open(context, entry.node),
-                onDelete: onDeleteNode == null || entry.node.isGroup
+                node: item.node,
+                index: index,
+                ratio: item.node.size / totalAreaSize * 100,
+                onOpen: () => _open(context, item.node),
+                onDelete: onDeleteNode == null || item.node.isGroup
                     ? null
-                    : () => onDeleteNode!(entry.node),
+                    : () => onDeleteNode!(item.node),
               ),
             );
           }).toList(),
@@ -147,7 +150,7 @@ class BentoTreemapWidget extends StatelessWidget {
             itemBuilder: (_, i) {
               final node = group.children[i];
               final color = node.isDirectory
-                  ? AppColors.primary
+                  ? AppColors.getFolderColor(node.name, i)
                   : node.category.color;
               return ListTile(
                 dense: true,
@@ -309,12 +312,14 @@ class _TreemapItem {
 
 class _BentoTile extends StatefulWidget {
   final BentoNode node;
+  final int index;
   final double ratio;
   final VoidCallback onOpen;
   final VoidCallback? onDelete;
 
   const _BentoTile({
     required this.node,
+    this.index = 0,
     required this.ratio,
     required this.onOpen,
     this.onDelete,
@@ -332,7 +337,7 @@ class _BentoTileState extends State<_BentoTile> {
   Color get _color => node.isGroup
       ? AppColors.catOther
       : node.isDirectory
-      ? AppColors.primary
+      ? AppColors.getFolderColor(node.name, widget.index)
       : node.category.color;
 
   IconData get _icon => node.isGroup
@@ -342,10 +347,10 @@ class _BentoTileState extends State<_BentoTile> {
       : node.category.icon;
 
   String get _hint => node.isGroup
-      ? 'Click to list'
+      ? 'Click to list items'
       : node.isDirectory
-      ? 'Click to open • Right-click for more'
-      : 'Click to reveal • Right-click for more';
+      ? 'Click to dive into folder • Right-click for options'
+      : 'Click to reveal in Explorer • Right-click for options';
 
   Future<void> _showMenu(Offset position) async {
     final action = await showMenu<String>(
@@ -500,6 +505,38 @@ class _BentoTileState extends State<_BentoTile> {
               ),
               const SizedBox(width: 6),
               Expanded(child: name),
+              if (node.isDirectory && _hover && isFull) ...[
+                const SizedBox(width: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.28),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: color.withValues(alpha: 0.7),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Dive',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(width: 2),
+                      Icon(Icons.arrow_forward_rounded, size: 10, color: color),
+                    ],
+                  ),
+                ),
+              ],
               if (isFull && _hover && widget.onDelete != null)
                 InkWell(
                   onTap: widget.onDelete,

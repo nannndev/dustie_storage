@@ -4,6 +4,7 @@ import 'package:equatable/equatable.dart';
 
 import 'bento_node.dart';
 import 'file_category.dart';
+import 'protected_paths.dart';
 import 'storage_item.dart';
 
 class StorageSummary extends Equatable {
@@ -54,10 +55,16 @@ class StorageSummary extends Equatable {
     final duplicatesMap = <String, List<StorageItem>>{};
     int totalBytes = 0;
 
+    // Protected files still count toward totals and the treemap, but are never offered for cleanup.
+    final protectedPaths = <String>{};
     for (final item in files) {
       totalBytes += item.size;
       catSize[item.category] = catSize[item.category]! + item.size;
       catCount[item.category] = catCount[item.category]! + 1;
+      if (ProtectedPaths.isProtected(item.path)) {
+        protectedPaths.add(item.path);
+        continue;
+      }
       if (item.size > 1024 * 50) {
         duplicatesMap
             .putIfAbsent('${item.name}_${item.size}', () => [])
@@ -65,8 +72,9 @@ class StorageSummary extends Equatable {
       }
     }
 
-    List<StorageItem> sortedBySize(bool Function(StorageItem) test) =>
-        files.where(test).toList();
+    List<StorageItem> sortedBySize(bool Function(StorageItem) test) => files
+        .where((f) => !protectedPaths.contains(f.path) && test(f))
+        .toList();
 
     return StorageSummary(
       rootPath: rootPath,
@@ -82,7 +90,9 @@ class StorageSummary extends Equatable {
       duplicateGroups: Map.fromEntries(
         duplicatesMap.entries.where((e) => e.value.length > 1),
       ),
-      emptyFolders: emptyFolders,
+      emptyFolders: emptyFolders
+          .where((d) => !ProtectedPaths.isProtected(d))
+          .toList(),
       rootTree: BentoNode.buildTreeFromItems(rootPath, files),
     );
   }

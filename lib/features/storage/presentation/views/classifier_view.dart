@@ -133,7 +133,8 @@ class _ClassifierViewState extends State<ClassifierView> {
                               );
                             },
                             decoration: InputDecoration(
-                              hintText: 'Search files by name or extension (.mp4, cache, backup)...',
+                              hintText:
+                                  'Search files by name or extension (.mp4, cache, backup)...',
                               hintStyle: TextStyle(
                                 color: AppColors.textMuted,
                                 fontSize: 13,
